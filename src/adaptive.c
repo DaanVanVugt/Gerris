@@ -743,9 +743,13 @@ static void gfs_adapt_thickness_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "expecting a VariableTracerVOFHeight");
     return;    
   }
+
+  gchar * name = g_strdup_printf("%s_d", fp->token->str);
+  gchar * description = g_strdup_printf("Thickness along the interface defined by %s", fp->token->str);
+
   gts_file_next_token (fp);
 
-  a->c = gfs_domain_add_variable (domain, NULL, NULL);
+  a->c = gfs_domain_add_variable (domain, name, description);
   a->c->coarse_fine = none;
   a->c->fine_coarse = none;
 }
