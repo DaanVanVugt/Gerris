@@ -24,3 +24,17 @@
 
 # Makefile things
 Makefile # created by ./configure from Makefile.am and Makefile.in
+*/Makefile
+
+# Extras
+*.Plo
+*.Po
+*.lo
+*.la
+src/.libs
+src/gerris2*
+src/gerris3*
+modules
+tools
+doc
+test
