@@ -749,7 +749,7 @@ static void gfs_adapt_thickness_read (GtsObject ** o, GtsFile * fp)
 
   gts_file_next_token (fp);
 
-  a->c = gfs_domain_add_variable (domain, name, description);
+  a->c = gfs_domain_get_or_add_variable (domain, name, description);
   a->c->coarse_fine = none;
   a->c->fine_coarse = none;
 
