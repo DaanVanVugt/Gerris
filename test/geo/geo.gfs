@@ -1,0 +1,122 @@
+# Title: Geostrophic adjustment
+#
+# Description:
+#
+# We consider the geostrophic adjustment problem studied by
+# Dupont {\cite{dupont}} and Le Roux et al {\cite{leroux98}}. A Gaussian bump
+# \[ \eta ( x, y ) = \eta_0 e^{^{- \frac{x^2 + y^2}{R^2}}} \]
+# is initialised in a 1000$\times$1000 km, 1000 m deep square basin. A reduced
+# gravity $g = 0.01$ m/s$^2$ is used to approximate a 10 m-thick stratified surface
+# layer. On an $f$-plane the corresponding geostrophic velocities are given by
+# \begin{eqnarray*}
+#   u ( x, y ) & = & \frac{2 g \eta_0 y}{f_0 R^2} e^{- \frac{x^2 + y^2}{R^2}},\\
+#   v ( x, y ) & = & - \frac{2 g \eta_0 x}{f_0 R^2} e^{- \frac{x^2 + y^2}{R^2}},
+# \end{eqnarray*}
+# where $f_0$ is the Coriolis parameter. Following Dupont we set $f_0 = 1.0285
+# \times 10^{- 4}$ s$^{- 1}$, $R = 100$ km, $\eta_0 = 599.5$ m which gives a
+# maximum geostrophic velocity of 0.5 m/s.
+#
+# In the context of the linearised shallow-water equations, the geostrophic
+# balance is an exact solution which should be preserved by the numerical
+# method. In practice, this would require an exact numerical balance between
+# terms computed very differently: the pressure gradient and the Coriolis terms
+# in the momentum equation. If this numerical balance is not exact, the
+# numerical solution will adjust toward numerical equilibrium through the
+# emission of gravity-wave noise which should not affect the stability of the
+# solution. This problem is thus a good test of both the overall accuracy of the
+# numerical scheme and its stability properties when dealing with
+# inertia--gravity waves. We note in particular that a standard A-grid
+# discretisation would develop a strong computational-mode instability in this
+# case. Also, as studied by Leroux et al, an inappropriate choice of
+# finite-element basis functions will result in growing gravity-wave noise.
+#
+# \begin{figure}[htbp]
+# \caption{\label{geo-error}Evolution of the maximum error on the surface height for the 
+# geostrophic adjustment problem.}
+# \begin{center}
+# \includegraphics[width=\hsize]{geo_error.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{geo-error1}Evolution of the surface-height error field. (a) $t =$1.157
+# days, (b) $t = 2.315$ days, (c) $t =$3.472 days, (d) $t =$4.630 days, (e) $t
+# =$17.361 days.}
+# \begin{center}
+# \begin{tabular}{ccccc}
+# \includegraphics[width=0.18\hsize]{error-100.eps} &
+# \includegraphics[width=0.18\hsize]{error-200.eps} &
+# \includegraphics[width=0.18\hsize]{error-300.eps} &
+# \includegraphics[width=0.18\hsize]{error-400.eps} &
+# \includegraphics[width=0.18\hsize]{error-1500.eps} \\
+#   (a) & (b) & (c) & (d) & (e)
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# Figures \ref{geo-error} and \ref{geo-error1} summarise the results obtained
+# when running the geostrophic adjustment problem on a $64 \times 64$ uniform
+# grid with a timestep $\Delta t = 1000$ s. The maximum error on the height
+# field (Figure \ref{geo-error}) is small even after 18 days. After a strong
+# initial transient corresponding to the emission of gravity waves, the error
+# reaches a minimum at day 3 and then slowly grows with time with modulations
+# due to the reflexions of the initial gravity waves on the domain boundaries.
+# As illustrated on figure \ref{geo-error1}, this growth is not due to any
+# instability of the solution but to the slow decrease of the maximum amplitude
+# of the Gaussian bump due to numerical energy dissipation.
+#
+# Author: St\'ephane Popinet
+# Command: sh geo.sh geo.gfs
+# Version: 100323
+# Required files: geo.sh geo.gfv e.ref
+# Running time: 3 minutes
+# Generated files: geo_error.eps error-100.eps error-200.eps error-300.eps error-400.eps error-1500.eps
+#
+1 0 GfsOcean GfsBox GfsGEdge {} {
+  Time { iend = 1580 dtmax = 1000 }
+  Refine 6
+  Global {
+      #define L0 1000e3
+      #define H0 1000
+      #define G 0.01
+      #define R0 100e3
+      #define ETA0 599.5
+      #define F0 1.0285e-4
+  }
+  PhysicalParams { L = L0 g = G }
+  Solid (z + H0)
+  Init {} {
+    # e-folding radius = 100 km
+    # umax = 0.5 m/s = sqrt(200)*exp(-1/2)
+    P = ETA0*exp (-(x*x + y*y)/(R0*R0))*G
+    U = 2.*G*ETA0*y/(F0*R0*R0)*exp (-(x*x + y*y)/(R0*R0))
+    V = - 2.*G*ETA0*x/(F0*R0*R0)*exp (-(x*x + y*y)/(R0*R0))
+  }
+  SourceCoriolis F0
+ 
+  AdvectionParams { scheme = none }
+  ApproxProjectionParams { tolerance = 1e-6 }
+
+  OutputErrorNorm { istep = 1 } { 
+      awk '{print $3/86400. " " $9; fflush (stdout); }' > e
+  } { v = P/G } {
+    s = ETA0*exp (-(x*x + y*y)/(R0*R0))
+    unbiased = 1
+    v = E
+  }
+  GModule gfsview
+  OutputView {  istart = 100 iend = 500 istep = 100 } error-%ld.eps { format = EPS } geo.gfv
+  OutputView {  istart = 1500 } error-%ld.eps { format = EPS } geo.gfv
+  EventScript { start = end } {
+    cat <<EOF | gnuplot
+    set term postscript eps lw 3 color solid 20
+    set output 'geo_error.eps'
+    set xlabel 'Time (days)'
+    set ylabel 'Maximum error on surface height (m)'
+    plot 'e.ref' t 'ref' w l, 'e' t '' w l
+EOF
+  }
+}
+GfsBox {
+  front = Boundary
+}

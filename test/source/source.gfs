@@ -1,0 +1,81 @@
+# Title: Flow created by a cylindrical volume source
+#
+# Description:
+#
+# The flow created by a cylindrical volume source is compared
+# against the analytical solution.
+#
+# $$
+# u_r = { s r \over 2 } \; \; if \; \;  r \le R_c
+# $$
+# $$
+# u_r = { s R_c^2 \over 2 r} \; \; if \; \;  r > R_c
+# $$
+#
+# \begin{figure}[htbp]
+# \caption{\label{Velocity Norm} Velocity field.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{velfield.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{Error Norms} Error Norms.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{Relative Local Error} Local error at level 11. Color scale [-5e-4:5e-4].}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{localerror.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: Daniel Fuster
+# Command: sh source.sh source.gfs
+# Version: 101217
+# Required files: source.sh source.gfv error.gfv error.ref
+# Generated files: velfield.eps error.eps localerror.eps
+#
+1 0 GfsSimulation GfsBox GfsGEdge { } {
+
+    Global {
+        #define R0 (0.05)
+        double sol (double x, double y) {
+            double r = sqrt(x*x+y*y);
+            return r >= R0 ? R0*R0*0.5/r : r*0.5;
+        }
+    }
+
+
+    Time { iend = 10 }
+
+    Refine (LEVEL - 4*pow((x*x+y*y)/0.25, 0.5))
+
+    Variable F
+    InitFraction F (R0*R0 - x*x - y*y)
+    Source P F
+    PhysicalParams { L = 2 }
+
+    OutputTime { istep = 1 } stderr
+
+    OutputErrorNorm { start = end } { awk '{ print LEVEL,$5,$7,$9 }' > error-LEVEL } { 
+	v = Velocity 
+    } {
+        s = sol(x,y)
+        v = E
+        w = (x*x + y*y < 25.*R0*R0)
+        relative = 1
+    }
+    
+    OutputSimulation { start = end } end-LEVEL.gfs
+} 
+GfsBox {
+    left  =  GfsBoundaryOutflow
+    right  = GfsBoundaryOutflow
+    top    = GfsBoundaryOutflow
+    bottom = GfsBoundaryOutflow
+}
+

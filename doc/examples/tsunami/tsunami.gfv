@@ -1,0 +1,50 @@
+# GfsView 2D
+View {
+  tx = -0.143643 ty = -0.00866483
+  sx = 1 sy = 1 sz = 1
+  q0 = 0 q1 = 0 q2 = 0 q3 = 1
+  fov = 25.226
+  r = 0.3 g = 0.4 b = 0.6
+  res = 1
+  lc = 0.001
+  reactivity = 0.1
+}
+Linear {
+  r = 1 g = 1 b = 1
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+} {
+  n.x = 0 n.y = 0 n.z = 1
+  pos = 0
+} P > 1e-2 ? P + Zb : NODATA {
+  amin = 0 min = -1
+  amax = 0 max = 1
+  show = 1
+  cmap = Jet
+} 0 {
+  reversed = 0
+  use_scalar = 1
+}
+Label {
+  r = 0 g = 0 b = 0
+  shading = Constant
+  maxlevel = 6
+  font_size = 3
+  raster_font = 1
+} {
+  x = 66.97 y = 29.0529 z = 0
+  label = "t = %g s"
+  symbol = 0
+}
+Location {
+  r = 0 g = 0 b = 1
+  shading = Constant
+  maxlevel = 5
+  font_size = 2
+  raster_font = 1
+} {
+  size = 0.4
+  label = 1
+}

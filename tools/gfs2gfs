@@ -1,0 +1,35 @@
+#!/bin/sh
+
+usage()
+{
+	cat <<EOF
+Usage: gfs2gfs [OPTIONS] < OLDFILE > NEWFILE
+
+Converts old Gerris simulation files to the current format.
+
+Options:
+        [--help]    display this message and exits
+EOF
+	exit $1
+}
+
+while test $# -gt 0; do
+  case "$1" in
+  -*=*) optarg=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+  *) optarg= ;;
+  esac
+
+  case $1 in
+    --help)
+      usage 0 1>&2
+      ;;
+    *)
+      usage 0 1>&2
+      ;;
+  esac
+  shift
+done
+
+sed 's/^ *GtsSurface/GfsSolid {}/g' | \
+sed 's/GtsSurfaceFile/GfsSolid/g' | \
+sed 's/surface =/solid =/g'

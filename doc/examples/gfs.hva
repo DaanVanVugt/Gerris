@@ -1,0 +1,17 @@
+
+%% (-*-LaTeX-*-)
+
+\newcommand{\gfsweb}{http://gfs.sf.net}
+\newcommand{\htmladdnormallinkfoot}[2]{\footahref{#2}{#1}}
+\newcommand{\htmladdnormallink}[2]{\ahref{#2}{#1}}
+\newcommand{\video}[3]{
+  \@print{<center>}
+  \@print{<video type="video/ogg" src="}\@getprint{#1}\@print{.ogv"}
+  \@print{       width="}\@getprint{#2}\@print{" height="}\@getprint{#3}\@print{"}
+  \@print{       poster="}\@getprint{#1}\@print{.png"}
+  \@print{       controls>}
+  \@print{  video tag not supported on this browser}
+  \@print{</video>}
+  \@print{</center>}
+}
+

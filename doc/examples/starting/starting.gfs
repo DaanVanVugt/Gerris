@@ -1,0 +1,76 @@
+# Title: Starting vortex of a NACA 2414 aerofoil
+#
+# Description:
+#
+# According to Wikipedia a
+# \url{http://en.wikipedia.org/wiki/Starting_vortex}{`Starting
+# vortex'} \begin{quotation}is a vortex which forms in the air
+# adjacent to the trailing edge of an airfoil as it is accelerated
+# from rest in a fluid. It leaves the airfoil\ldots, and remains
+# (nearly) stationary in the flow.  \end{quotation} Or in the frame of
+# reference of the aerofoil, it appears to recede behind the wing.
+# The phenomenon is fundamental to the understanding of the generation
+# of lift by aerofoils; see e.g. \cite{glauert1926} (Figure 69, p. 121) or
+# \cite{videler2006} (Figure 1.5, p. 21).
+#
+# A starting vortex is easily generated in a Gerris simulation, as
+# shown here.  It does not depend for its existence on the viscosity
+# of the air, or the third dimension, so here we solve the
+# two-dimensional Euler equations.
+#
+# The phenomenon does depend on the trailing edge being sharp, as it
+# is for most aerofoils.  There is a great collection of such shapes
+# at the
+# \url{http://www.ae.illinois.edu/m-selig/ads/coord\_database.html}{UIUC
+# Airfoil Coordinates Database}.  The coordinates from these files can
+# be converted to a Gerris solid surface using the Gerris command line
+# utility \url{http://gfs.sourceforge.net/wiki/index.php/Shapes}{shapes}.
+# Here we use a classic aerofoil, the NACA 2414 \cite{jacobs1933}, from
+# \url{http://www.ae.illinois.edu/m-selig/ads/coord/n2414.dat}{n2414.dat}.
+#
+# Static refinement around the wing section is necessary to capture
+# the shape well in a Cartesian quad-tree grid.  The grid is also
+# adaptively refined on the vorticity to resolve the trailing vortex
+# as it recedes into the wake.
+#
+# \begin{figure}[htbp]
+# \caption{\label{movie}Generation of a starting vortex in plane flow
+# over a NACA 2414 aerofoil at 6$^\circ$ incidence. The colour is vorticity
+# (red positive anticlockwise).}
+# \begin{center}
+# \htmladdnormallinkfoot{\includegraphics[width=0.8\hsize]{starting.eps}}{starting.mpg}
+# \end{center}
+# \end{figure}
+#
+# Author: G. D. McBain
+# Command: sh starting.sh n2414 6 | gfsview2D starting.gfv
+# Version: 110213-051327
+# Required files: starting.sh starting.gfv n2414.dat
+# Running time: 5 minutes
+# Generated files: starting.mpg starting.eps
+Define FRAMEPERIOD 0.02
+
+3 2 GfsSimulation GfsBox GfsGEdge {} {
+  Time { end = 1.5 }		# exit - trailing edge = (3-0.5) - 1 = 1.5
+  RefineSolid 9
+  Solid AEROFOIL.gts { rz = -INCIDENCE }
+  Init {} { U = 1 }
+  AdaptVorticity { istep = 1 } { maxlevel = 8 cmax = 5e-2 }
+  
+  OutputTime { step = FRAMEPERIOD } stderr
+
+  OutputSimulation { step = FRAMEPERIOD } stdout
+
+  GModule gfsview
+  OutputView { step = FRAMEPERIOD } { ppm2mpeg > starting.mpg } {
+      width = 720 height = 240
+  } starting.gfv
+  OutputView { start = 1. } { convert ppm:- -geometry 720x240 starting.eps } { 
+      format = PPM width = 1440 height = 480 
+  } starting.gfv
+}
+GfsBox { left = GfsBoundaryInflowConstant 1 }
+GfsBox { }
+GfsBox { right = GfsBoundaryOutflow }
+1 2 right
+2 3 right

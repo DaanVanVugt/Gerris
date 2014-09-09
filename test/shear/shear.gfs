@@ -1,0 +1,98 @@
+# Title: Time-reversed VOF advection in a shear flow
+#
+# Description:
+#
+# A test case initially presented by Rudman \cite{rudman97}.
+# A circular patch of tracer is advected in a vortical shear flow. At t = 2.5
+# the flow direction is reversed. An exact advection scheme would restore the 
+# initial circular shape at t = 5.
+#
+# The VOF (Volume-Of-Fluid) advection scheme is not exact. The initial, intermediate
+# and final shape of the interface are represented on Figure \ref{advection}. 
+# Figure \ref{error} illustrates the error between the initial and final shapes. The
+# corresponding error norms are given in Table \ref{norms}.
+#
+# Adaptive refinement is used with the gradient of the volume fraction as criterion.
+# Eight levels of refinement are used on the interfaces and six away from the interface.
+#
+# \begin{figure}[htbp]
+# \caption{\label{advection}Volume fraction field at times (a) 0, (b) 2.5 and (c) 5.}
+# \begin{center}
+# \begin{tabular}{ccc}
+# \includegraphics[width=0.3\hsize]{t-0.eps} &
+# \includegraphics[width=0.3\hsize]{t-2.5.eps} &
+# \includegraphics[width=0.3\hsize]{t-5.eps} \\
+# (a) & (b) & (c)
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{error}Difference between the initial and final volume fraction fields.}
+# \begin{center}
+# \includegraphics[width=0.4\hsize]{dt-5.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{table}[htbp]
+# \caption{\label{norms}Norms of the error between the initial and final fields. The
+# reference values are given in blue.}
+# \begin{center}
+# \begin{tabular}{|c|c|c|}\hline
+# $L_1$ & $L_2$ & $L_\infty$ \\ \hline
+# \input{norms.tex}
+# \end{tabular}
+# \end{center}
+# \end{table}
+#
+# Author: St\'ephane Popinet
+# Command: sh shear.sh shear.gfs
+# Version: 091022
+# Required files: shear.sh norms.ref
+# Running time: 2 minutes
+# Generated files: t-0.eps t-2.5.eps t-5.eps dt-5.eps norms norms.tex
+#
+# The type of the simulation is GfsAdvection which only solves the advection
+# of passive tracers.
+1 0 GfsAdvection GfsBox GfsGEdge {} {
+    Time { end = 5 }
+    Refine 8
+
+    # Add tracer T, using a VOF advection scheme.
+    # The default scheme is a Van-Leer limited, second-order upwind scheme.
+    VariableTracerVOFHeight T
+
+    InitFraction T (ellipse (0, -.236338, 0.2, 0.2))
+
+    # Maintain U and V with the vortical shear flow field defined by
+    # its streamfunction
+    VariableStreamFunction {
+	# make sure that the entire field is reinitialised at t = 2.5
+	step = 2.5 
+    } Psi (t < 2.5 ? 1. : -1.)*sin((x + 0.5)*M_PI)*sin((y + 0.5)*M_PI)/M_PI
+    
+    # Adapt the mesh dynamically so that at any time the maximum of the gradient
+    # of T is less than or equal to zero per cell length
+    AdaptGradient { istart = 1 istep = 1 } { cmax = 0 maxlevel = 8 } T
+    
+    OutputPPM { start = 0 } { convert ppm:- t-0.eps } { v = T }
+    OutputPPM { start = 2.5 } { convert ppm:- t-2.5.eps } { v = T }
+    OutputPPM { start = 5 } { convert ppm:- t-5.eps } { v = T }
+
+    # Add a new variable 
+    Variable Tref
+
+    # Initialize Tref with the initial shape
+    InitFraction { start = end } Tref (ellipse (0, -.236338, 0.2, 0.2))
+
+    # Output the norms of the difference between T and Tref, stores that into
+    # new variable DT
+    OutputErrorNorm { start = end } norms { v = T } {
+        s = Tref v = DT
+    }
+
+    OutputPPM { start = end } { convert ppm:- dt-5.eps } { v = DT }
+
+    OutputScalarSum { istep = 1 } { awk '{ print $3,$5-8.743441e-01 }' > t } { v = T }
+}
+GfsBox {}

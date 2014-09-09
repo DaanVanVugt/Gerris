@@ -1,0 +1,80 @@
+# Title: B\'enard--von K\'arm\'an vortex street behind a cylinder translating in a fluid at rest
+#
+# Description:
+#
+# An example of 2D viscous flow around a simple solid boundary. A solid
+# cylinder is impulsively started at the right of a channel bounded by
+# solid walls with a slip boundary condition.
+# 
+# Adaptive refinement is used based on the vorticity.
+#
+# After an initial growth phase, a classical B\'enard--von K\'arman
+# vortex street is formed.
+#
+# \begin{figure}[htbp]
+# \caption{\label{vorticity} Vorticity field.}
+# \begin{center}
+# \includegraphics[width=\hsize]{vort.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{Forces} Evolution of the drag and lift coefficients
+# for a Reynolds number of 400.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{forces.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{Strouhal} Strouhal number versus Reynolds
+# number. Comparison between static (reference) and moving problem.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{strouhal.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: S\'ebastien Delaux
+# Command: sh strouhal.sh
+# Version: 090512
+# Required files: strouhal.sh strouhal.gfv strouhal.ref moving.ref static.ref
+# Generated files: strouhal.eps vort.eps forces.eps
+#
+1 0 GfsSimulationMoving GfsBox GfsGEdge {} {
+  Time { end = 0.8 }
+  Refine {
+      if (fabs(y) < 0.02 && x > 0.38 && x < 0.42)
+	  return 11;
+      if (fabs(y) < 0.35 && x > 0.3 && x < 0.5)
+	  return 8;
+      return 5;
+  }
+
+  SolidMoving { istep = 1 } cylinder.gts { tx = 0.4 scale = 0.025 } { level = 11 }
+
+  # Set the boundary condition on the solid object.
+  # The velocity is imposed
+  SurfaceBc U Dirichlet -1.
+
+  # Adapt the mesh using the vorticity criterion at every timestep
+  AdaptVorticity { istep = 1 } { maxlevel = (x > 0.5 - t ? 9 : 10) cmax = 1e-2 }
+
+  SourceViscosity 3.125e-5
+
+  OutputSimulation { start = end } end.gfs 
+  OutputSolidForce { istep = 1 } forces.dat
+
+  EventScript { start = end } {
+      cat <<EOF | gnuplot 2>&1 | awk '{if ($1 == "400") print $0;}'
+           f(x)= a*cos(b*(x+c))
+           a = 0.00525
+           b = 110.49
+           c = 0.611
+           fit [0.5:] f(x) 'forces.dat' u 1:6 via a,b,c
+           print "400 ", b/(2*pi)*0.0125       
+EOF
+  }
+}
+GfsBox {
+    right = BoundaryOutflow 
+}

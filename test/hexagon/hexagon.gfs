@@ -1,0 +1,74 @@
+# Title: Translation of an hexagon in a uniform flow
+#
+# Description: 
+#
+# An hexagonal solid object translates uniformly in a fluid moving at
+# the same speed (U = 1). There is no diffusion.
+#
+# The conservation properties of the scheme can be checked by filling
+# the simulation domain with tracer and computing the total amount at
+# each time step.
+# 
+# \begin{figure}[htbp]
+# \caption{\label{errorvelocitytime} Error in the horizontal component
+# of the velocity field. Dark blue is zero, dark red 0.1.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{end-2.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{ordertime} Evolution of the global RMS error on the
+# velocity field.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: S\'ebastien Delaux
+# Command: sh hexagon.sh hexagon.gfs
+# Version: 090502
+# Required files: hexagon.sh hexagon.gts hexagon.gfv
+# Generated files: error.eps end-2.eps
+#
+2 1 GfsSimulationMoving GfsBox GfsGEdge {} {
+  Time { end = .1875 }
+  Refine 7
+
+  SolidMoving hexagon.gts { scale = 0.250001 } { level = 7 }
+  AdvectionParams { 
+      moving_order = ORDER 
+      # uncommenting the following line leads to instabilities for the
+      # first-order scheme 
+      # cfl = 0.45
+  }
+  
+  ProjectionParams { tolerance = 1e-10 }
+  ApproxProjectionParams { tolerance = 1e-10 }
+
+  AdaptVorticity { istep = 1 } { minlevel = 4 maxlevel = 7 cmax = 1e-2 }
+
+  VariableTracer T
+ 
+  SurfaceBc U Dirichlet 1.
+
+  Init {} { U = 1 T = 1 }
+
+  OutputErrorNorm { istep = 1 } {
+      awk '{ printf ("%e %e %e %e\n", $3, $5, $7, $9) }' > momentumerror-ORDER
+  } { v = sqrt((U - 1.)*(U - 1.) + V*V) } { s = 0. }
+
+  OutputScalarSum { istep = 1 } {
+      awk '{ printf ("%e %e\n", $3, $5 - 1.953125) }' > tracersum-ORDER
+  } { v = T }
+  OutputSimulation { start = end } end-ORDER.gfs
+  
+}
+GfsBox {
+    left = Boundary {
+	BcDirichlet U 1
+	BcDirichlet T 1
+    }
+}
+GfsBox { right = BoundaryOutflow }
+1 2 right

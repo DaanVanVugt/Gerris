@@ -1,0 +1,121 @@
+# Title: "Garden sprinkler effect" in wave model
+#
+# Description:
+#
+# The wave model is used to reproduce the classical "Garden Sprinkler
+# Effect" (GSE), a numerical artifact of the discrete directions of
+# wave propagation (see Tolman, 2002).
+#
+# A spatially-Gaussian wave spectrum is initialised in a 5000
+# km-squared domain. The other parameters are those of Tolman, 2002.
+#
+# The final (t = 5 days) significant wave height for different model
+# runs is illustrated in Figure \ref{end}. The interval between the
+# isolines is 0.1 metres as in Figure 1 of Tolman, 2002. For a small
+# number of discrete directions (24), the GSE is evident and the
+# results closely match those of Tolman both for the constant
+# resolution and the adaptive version of the code. For larger number
+# of directions (60 and 120), the results do not show any obvious GSE
+# and match the corresponding results of Tolman (Figure 1.b of Tolman,
+# 2002 but note that the spatial resolution of Tolman is finer, 25 km
+# rather than 78 km here).
+#
+# \begin{figure}[htbp]
+# \caption{\label{end}Final (t = 5 days) significant wave height for
+# different model runs.}
+# \begin{center}
+# \includegraphics[width=\hsize]{end.eps}
+# \end{center}
+# \end{figure}
+#
+# The evolution in time of the significant wave height together with
+# the corresponding adaptive discretisation is illustrated in Figure
+# \ref{mesh} for 120 directions. The mesh is adapted according to the
+# spatial gradient in the significant wave height. This results in
+# substantial savings in computational cost as illustrated by the
+# timings given in Table \ref{cpu}. The computational cost with 120
+# directions is comparable to the cost with 24 directions on a regular
+# (i.e. non-adaptive) mesh. This demonstrates that the GSE can be
+# alleviated -- at comparable computational cost -- by combining
+# adaptive refinement with a refined discretisation in direction
+# space.
+#
+# \begin{figure}[htbp]
+# \caption{\label{mesh}Evolution of the significant wave height and
+# adaptive mesh. 120 directions.}
+# \begin{center}
+# \includegraphics[width=\hsize]{mesh.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{table}[htbp]
+# \caption{\label{cpu}CPU time for the four models of Figure \ref{end}.}
+# \begin{center}
+# \input{cpu.tex}
+# \end{center}
+# \end{table}
+#
+# Author: St\'ephane Popinet
+# Command: sh garden.sh
+# Version: 1.2.1
+# Required files: garden.sh end.gfv mesh.gfv
+# Running time: 41 minutes
+# Generated files: end.eps mesh.eps cpu.tex
+#
+1 0 GfsWave GfsBox GfsGEdge {} {
+    Refine 6
+
+    # Default time units for wave model is hours
+    # 120 hours = 5 days
+    Time { end = 120 }
+
+    # Default length units for wave model is km
+    PhysicalParams { L = 5000 }
+
+    # Define some useful functions
+    Global {
+        /* gaussian distribution */
+        static double gaussian (double f, double fmean, double fsigma) {
+            return exp (-((f - fmean)*(f - fmean))/(2.*fsigma*fsigma));
+        }
+        /* cos(theta)^n distribution */
+        static double costheta (double theta, double thetam, double thetapower) {
+            double a = cos (theta - thetam);
+            return a > 0. ? pow (a, thetapower) : 0.;
+        }
+    }
+
+    # Initialise the wave spectrum
+    InitWave {} {
+        /* This function defines the spectral distribution:
+         * a gaussian in frequency space and 
+         * a cos(theta)^2 distribution in direction space 
+	 */
+        return gaussian (Frequency, 0.1, 0.02)*
+               costheta (Direction, 30.*M_PI/180., 2.);
+    } {
+        /* This function defines the significant wave height:
+         * the energy is a gaussian bump in (x,y) space,
+         * the maximum significant wave height is 2.5 
+	 */
+        x -= -2000.;
+        y -= -2000.;
+        double Hsmax = 2.5;
+        double E = (Hsmax*Hsmax/16.)*gaussian (sqrt (x*x + y*y), 0., 150.);
+        return 4.*sqrt (E);
+    }
+
+    AdaptGradient { istep = 1 } { cmax = 0.04 minlevel = MINLEVEL maxlevel = 6 } Hs
+
+    OutputTime { istep = 1 } log-MINLEVEL-NTHETA
+    OutputScalarStats { step = 12 } hs-MINLEVEL-NTHETA { v = Hs }
+    OutputSimulation { step = 12 } sim-MINLEVEL-NTHETA-%g.gfs
+    EventScript { step = 12 } { gzip -f sim-*-*-*.gfs }
+    OutputSimulation { start = end } end-MINLEVEL-NTHETA.gfs    
+    EventScript { start = end } { gzip -f end-*-*.gfs }
+    OutputPPM { step = 12 } { ppm2mpeg > hs-MINLEVEL-NTHETA.mpg } { v = Hs maxlevel = 7 }
+} {
+    # Number of discretised directions (default is 24)
+    ntheta = NTHETA
+}
+GfsBox {}

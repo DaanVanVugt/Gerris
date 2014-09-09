@@ -1,0 +1,80 @@
+# Title: Creeping Couette flow of Generalised Newtonian fluids
+#
+# Description:
+#
+# Following \cite{vola2004}, we solve for the 2D creeping flow between
+# two coaxial cylinders. The inner cylinder rotates at a constant
+# speed. The outer cylinder is fixed. The viscosity is a function of
+# the second principal invariant of the shear strain rate tensor:
+# $$|D|=\sqrt{\sum_{i,j}D_{ij}D_{ij}}$$
+# where $D_{ij}=(\partial_iu_j+\partial_ju_i)/2$.
+#
+# We use a general Herschel-Bulkley formulation of the form:
+# $$\mu(|D|)={\tau_y\over 2|D|}+\mu|D|^{N-1},$$ where $\tau_y$ is the
+# yield stress. The solutions obtained for the stationary tangential
+# velocity profiles for Newtonian, Power law ($N=0.5$),
+# Herschel-Bulkley ($\mu=0.0672$, $\tau_y=0.12$, $N=0.5$) and Bingham
+# ($\mu=1$, $\tau_y=10$, $N=1$) fluids are illustrated on Figure
+# \ref{prof}, together with the analytical solutions given by
+# \cite{bird87}.
+#
+# The Bingham fluid case is a particularly severe test of the
+# diffusion solver, as the outer part of the fluid ring ($r>0.35$)
+# behaves likes a rigid body attached to the outer boundary.
+#
+# \begin{figure}[htbp]
+# \caption{\label{prof}Tangential velocity as a function of radial position for
+# various Generalised Newtonian fluids.}
+# \begin{center}
+# \includegraphics[width=\hsize]{prof.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh couette.sh couette.gfs
+# Version: 1.0.0
+# Required files: couette.sh profile prof-0.ref prof-1.ref prof-2.ref prof-3.ref
+# Running time: 32 minutes
+# Generated files: prof.eps
+#
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+  Time { iend = 100 dtmax = 1e-2 }
+  Refine 6
+  Solid (ellipse (0,0,0.25,0.25)) { flip = 1 scale = 1.9999 }
+  Solid (ellipse (0,0,0.25,0.25))
+  ApproxProjectionParams { tolerance = 1e-6 }
+  AdvectionParams { scheme = none }
+  SourceViscosity {} {
+    double mu, ty, N, mumax = 1000.;
+    double m;
+
+    switch (MODEL) {
+    case 0: /* Newtonian */
+      mu = 1.; ty = 0.; N = 1.; break;
+    case 1: /* Power-law (shear-thinning) */
+      mu = 0.08; ty = 0.; N = 0.5; break;
+    case 2: /* Herschel-Bulkley */
+      mu = 0.0672; ty = 0.12; N = 0.5; break;
+    case 3: /* Bingham */
+      mu = 1.; ty = 10.; N = 1.; break;
+    }
+    if (D2 > 0.)
+      m = ty/(2.*D2) + mu*exp ((N - 1.)*log (D2));
+    else {
+      if (ty > 0. || N < 1.) m = mumax;
+      else m = N == 1. ? mu : 0.;
+    }
+    return MIN (m, mumax);
+  } {
+    # Crank-Nicholson does not converge for these cases, we need backward Euler
+    # (beta = 0.5 -> Crank-Nicholson, beta = 1 -> backward Euler)
+    beta = 1
+  }
+  SurfaceBc U Dirichlet (x*x + y*y > 0.140625 ? 0. : - ay)
+  SurfaceBc V Dirichlet (x*x + y*y > 0.140625 ? 0. :   ax)
+  EventStop { istep = 1 } U 1e-4 DU
+
+  OutputScalarNorm { istep = 1 } du-MODEL { v = DU }
+  OutputLocation { start = end } { awk '{if ($1 != "#") print $2,$8;}' > prof-MODEL } profile
+}
+GfsBox {}

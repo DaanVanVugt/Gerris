@@ -1,0 +1,20 @@
+User guide for RStarTree Version R2.xx (VR2.xx)
+-----------------------------------------------
+
+The files "RStarTree.h", "RSTBase.h" and "libcSmRST.a" should reside in the
+directory, where this README file resides. We will call this directory "dest".
+RStarTree.h is the user interface. RSTBase.h is a private header file included
+by RStarTree.h. Provided that, RSTREE is a typed pointer (not a void).
+
+SYNOPSYS
+
+Compilation:
+#include "dest/RStarTree.h"
+
+Linking:
+-Ldest -lcSmRST
+
+The usage of the RStarTree implementation is explained in RStarTree.h.
+You might have a look at dest/src/trst.c as an example as well. trst uses a
+little set implementation also located in dest/src.
+Installation hints you'll find in dest/src/READMEInstall.

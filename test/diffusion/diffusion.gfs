@@ -1,0 +1,46 @@
+# Title: Comparison between the explicit and implicit diffusion schemes
+#
+# Description:
+#
+# A tracer diffuses from the (circular) boundary of the domain for a
+# given time. This test case compares the solutions obtained using the
+# implicit and the explicit diffusion schemes.
+#
+# The radial tracer profiles for both schemes are illustrated in
+# Figure \ref{profile}.
+#
+# \begin{figure}[htbp]
+# \caption{\label{profile}Radial tracer profile evolution as a function of time.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{profile.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh diffusion.sh
+# Version: 101103
+# Required files: diffusion.sh
+# Generated files: profile.eps
+#
+1 0 GfsAdvection GfsBox GfsGEdge {} {
+    VariableTracer T { scheme = none }
+#    SourceDiffusion T 1 { beta = 1 }
+    SourceDiffusionExplicit T 1
+    Solid (-sphere(0,0,0,0.4))
+    Refine 5
+    SurfaceBc T Dirichlet 1
+
+    # Just checks that it works with hypre
+    GModule hypre
+
+    Time { end = 0.02 dtmax = 9e-5 }
+#    OutputTime { istep = 1 } stderr
+    OutputSimulation { start = 0.01 } end.gfs
+    OutputSimulation { start = 2.5e-3 step = 2.5e-3 } {
+	awk '{
+           if ($1 != "#")
+             print sqrt($1*$1+$2*$2),$8;
+        }' > prof
+    } { format = text }
+}
+GfsBox {}

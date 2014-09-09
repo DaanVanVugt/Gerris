@@ -1,0 +1,626 @@
+# Title: Coastally-trapped waves with adaptive refinement
+#
+# Description:
+#
+# Same test case as before but with adaptive refinement (using the
+# vorticity criterion).
+#
+# Figure \ref{solution} illustrates the solution obtained after three
+# wave periods.
+#
+# \begin{figure}[htbp]
+# \caption{\label{solution}Surface-height after a rotation of 3 wave
+# periods. The maximum resolution is 9.375 km (dark red), the minimum
+# resolution is 150 km (dark blue).}
+# \begin{center}
+# \includegraphics[width=0.6\hsize]{solution.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{table}[htbp]
+# \caption{\label{correlation}Maximum correlation and phase error as functions of resolution.}
+# \begin{center}
+# \input{correlation.tex}
+# \end{center}
+# \end{table}
+#
+# Author: St\'ephane Popinet
+# Command: sh ../waves.sh adaptive.gfs
+# Version: 100323
+# Required files: solution.gfv correlation.ref
+# Generated files: correlation correlation.tex solution.eps
+#
+1 0 GfsOcean GfsBox GfsGEdge {} {
+  Time { end = 37.80501984 dtmax = 0.1 }
+  PhysicalParams { g = 5.87060327757e-3 }
+  Global {
+    #include <gsl/gsl_sf_bessel.h>
+    @link -lgsl -lgslcblas
+    
+    #define Ik(k,r,D) (gsl_sf_bessel_Inu ((k) - 1., (r)/(D))/(D)\
+                          - (k)/(r)*gsl_sf_bessel_Inu ((k), (r)/(D)))
+
+    static double D = 8.83906519983e-2;
+    static double k = 3.;
+    static double sigma = 0.4986;
+    static double a = 1./2555510.;
+    
+    static double pwave (double x, double y, double angle) {
+      double theta = atan2 (y, x) + angle*M_PI/180.;
+      double r = sqrt (x*x + y*y);
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+    }
+
+    static double ur (double theta, double r) {
+      return -a*D*D/5.87060327757e-3*sin (k*theta)*(sigma*Ik (k, r, D) - 
+          k/r*gsl_sf_bessel_Inu (k, r/D));
+    }
+
+    static double vt (double theta, double r) {
+      return a*D*D/5.87060327757e-3*cos (k*theta)*(Ik (k, r, D) - 
+       	  k*sigma/r*gsl_sf_bessel_Inu (k, r/D));
+    }
+
+    static double uwave (double x, double y) {
+      double theta = atan2 (y, x);
+      double r = sqrt (x*x + y*y);
+      return ur (theta, r)*cos (theta) - vt (theta, r)*sin (theta);
+    }
+
+    static double vwave (double x, double y) {
+      double theta = atan2 (y, x);
+      double r = sqrt (x*x + y*y);
+      return ur (theta, r)*sin (theta) + vt (theta, r)*cos (theta);
+    }
+  }
+  Init {} {
+    P = pwave(cx, cy, 0)
+    U = uwave(x, y)
+    V = vwave(x, y)
+    # Remove the line below when using gerris3D
+    H = 1
+  }
+  Refine LEVEL
+  AdaptVorticity { istep = 1 } { cmax = 5e-2 maxlevel = LEVEL }
+  Solid (union (- ellipse (0, 0, 0.49975, 0.49975), z + 1.))
+  AdvectionParams { scheme = none }
+  ApproxProjectionParams { tolerance = 1e-9 weighted = 0 }
+  SourceCoriolis {} 1.
+  EventFilter { istep = 1 } U 4
+  EventFilter { istep = 1 } V 4
+  EventScript { start = end } { echo -n "-30 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -30)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-29 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -29)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-28 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -28)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-27 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -27)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-26 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -26)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-25 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -25)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-24 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -24)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-23 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -23)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-22 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -22)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-21 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -21)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-20 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -20)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-19 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -19)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-18 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -18)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-17 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -17)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-16 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -16)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-15 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -15)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-14 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -14)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-13 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -13)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-12 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -12)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-11 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -11)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-10 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -10)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-9 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -9)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-8 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -8)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-7 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -7)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-6 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -6)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-5 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -5)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-4 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -4)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-3 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -3)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-2 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -2)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "-1 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, -1)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "0 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 0)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "0.1 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 0.1)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "0.2 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 0.2)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "0.3 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 0.3)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "0.4 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 0.4)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "0.5 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 0.5)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "0.6 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 0.6)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "0.7 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 0.7)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "0.8 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 0.8)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "0.9 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 0.9)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "1 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 1)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "1.1 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 1.1)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "1.2 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 1.2)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "1.3 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 1.3)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "1.4 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 1.4)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "1.5 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 1.5)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "1.6 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 1.6)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "1.7 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 1.7)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "1.8 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 1.8)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "1.9 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 1.9)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "2 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 2)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "2.1 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 2.1)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "2.2 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 2.2)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "2.3 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 2.3)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "2.4 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 2.4)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "2.5 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 2.5)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "2.6 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 2.6)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "2.7 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 2.7)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "2.8 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 2.8)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "2.9 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 2.9)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "3 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 3)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "3.1 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 3.1)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "3.2 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 3.2)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "3.3 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 3.3)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "3.4 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 3.4)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "3.5 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 3.5)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "3.6 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 3.6)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "3.7 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 3.7)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "3.8 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 3.8)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "3.9 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 3.9)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "4 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 4)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "4.1 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 4.1)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "4.2 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 4.2)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "4.3 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 4.3)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "4.4 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 4.4)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "4.5 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 4.5)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "4.6 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 4.6)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "4.7 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 4.7)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "4.8 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 4.8)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "4.9 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 4.9)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "5 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 5)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "6 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 6)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "7 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 7)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "8 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 8)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "9 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 9)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "10 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 10)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "11 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 11)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "12 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 12)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "13 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 13)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "14 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 14)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "15 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 15)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "16 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 16)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "17 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 17)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "18 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 18)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "19 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 19)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "20 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 20)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "21 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 21)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "22 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 22)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "23 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 23)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "24 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 24)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "25 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 25)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "26 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 26)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "27 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 27)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "28 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 28)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "29 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 29)
+    unbiased = 1
+  }
+  EventScript { start = end } { echo -n "30 " }
+  OutputCorrelation { start = end } stdout { v = P } {
+    s = pwave(cx, cy, 30)
+    unbiased = 1
+  }
+  OutputSimulation { start = end } sim-LEVEL
+}
+GfsBox {
+  # uncomment the line below when using gerris3D
+  # front = Boundary
+}

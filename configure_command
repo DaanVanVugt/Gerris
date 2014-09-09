@@ -1,0 +1,2 @@
+#!/bin/bash
+CPPFLAGS=-I$PREFIX/include LDFLAGS="-L$PREFIX/lib -lmpi_cxx" ./configure --prefix=$PREFIX

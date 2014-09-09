@@ -1,0 +1,22 @@
+#!/usr/bin/make -f
+
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/cdbs/1/class/autotools.mk
+
+DEB_DH_MAKESHLIBS_ARGS_ALL = -- -c0
+
+# To look for shlibs and symbols file in locally compiled libgts-snapshot debian package
+# do something like:
+# % export DEB_DH_SHLIBDEPS_ARGS_ALL="-- -S$HOME/local/src/gts-mainline/debian/libgts-snapshot"
+
+clean::
+	rm -f a.out
+	rm -f doc/examples/gfs.lang
+	rm -f doc/examples/gfs2tex.pyc
+	rm -f doc/examples/Makefile.deps
+	rm -f src/modules.c
+	rm -f src/modules.h
+
+# Remove rpath added by libtool
+binary-post-install/gerris-snapshot ::
+	- chrpath -d -k debian/gerris-snapshot/usr/bin/* 2> /dev/null

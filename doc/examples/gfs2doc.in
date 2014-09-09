@@ -1,0 +1,91 @@
+#!/usr/bin/python
+
+import sys
+import os
+import stat
+import glob
+import tempfile
+
+sys.path.append("@prefix@/share/gerris")
+import gfs2tex
+
+if len(sys.argv) < 2:
+    print "usage: gfs2doc DIR1 DIR2..."
+    sys.exit(1)
+
+def myexit(s):
+    os.system("rm -r -f " + wdname)
+    sys.exit(s)
+    
+for d in sys.argv[1:]:
+    example = gfs2tex.Example(d)
+    example.write()
+    wdname = tempfile.mkdtemp()
+    tex = open(wdname + "/" + example.name + ".tex", "w")
+    tex.write(r"""
+    \documentclass[a4paper]{article}
+    \usepackage{hevea}
+    \usepackage[usenames]{color}
+    \usepackage{graphicx}
+    \usepackage{gfs}
+    
+    \oddsidemargin=4mm
+    \evensidemargin=-1mm
+    \topmargin=-7mm
+    \textwidth=15.42cm
+    \textheight=23.2cm
+
+    \begin{document}
+    \section{Examples}
+    """)
+    tex.write(r"\input{" + example.name + "/" + example.name + ".tex" + "}\n")
+    tex.write("\\end{document}\n")
+    tex.close()
+    os.symlink(os.getcwd() + "/" + example.name, wdname + "/" + example.name)
+    if os.system("export TEXINPUTS=\".:@prefix@/share/gerris:\" " +\
+              "&& rm -r -f " + example.name + ".pdf " + example.name + "_html" +\
+              "&& cd " + wdname + \
+              "&& latex -interaction=nonstopmode 2>&1 " + example.name + ".tex" +\
+              "&& latex -interaction=nonstopmode " + example.name + ".tex") or \
+       os.system("cd " + wdname + \
+              "&& dvips -Ppdf -G0 " + example.name + ".dvi -o " + example.name + ".ps" +\
+              "&& ps2pdf -sPAPERSIZE=a4 -dMaxSubsetPct=100 -dCompatibilityLevel=1.2 -dSubsetFonts=true -dEmbedAllFonts=true " + example.name + ".ps " + example.name + ".pdf" +\
+              "&& mv " + example.name + ".pdf " + os.getcwd()):
+        print "\n\n**** Errors occured while generating file ****: " + example.name + ".pdf"
+        myexit(1)
+        
+    print "\n\n**** Successfully generated file ****: " + example.name + ".pdf\n\n"
+    hname = wdname + "/" + example.name + "_html"
+    os.mkdir(hname)
+    os.symlink("../" + example.name, hname + "/" + example.name)
+    wdir = os.getcwd()
+    if os.system("export TEXINPUTS=\".:@prefix@/share/gerris:\" " +\
+                 "&& cd " + wdname + \
+		 "&& hevea -fix -I @prefix@/share/gerris " + example.name + ".tex" + \
+                 "&& sh @prefix@/share/gerris/kaltura.sh " + example.name):
+        print "\n\n**** Errors occured while generating directory ****: " + example.name + "_html"
+        myexit(1)
+    os.system("export TEXINPUTS=\".:@prefix@/share/gerris:\" " +\
+                  "&& cd " + wdname + \
+                  "; imagen -res 600 -extra \"pnmscale 0.24\" " + example.name + " " + \
+                  "; mv -f " + example.name + "[0-9][0-9][0-9].png " + example.name + ".html " + \
+                  hname + \
+                  "; mv " + hname + " " + wdir)
+        
+    print "\n\n**** Successfully generated directory ****: " + example.name + "_html\n"
+    files = example.name + "/" + example.name + ".gfs"
+    for f in example.required:
+        files += " " + example.name + "/" + f
+    if os.system("tar czf " + example.name + ".tgz " + files):
+        print "**** Errors occured while generating file ****: " + example.name + ".tgz"
+        os.remove(example.name + ".tgz")
+        myexit(1)
+    status,msg = example.test()
+    if status != None:
+        print "**** Errors occured while generating file ****: " + example.name + ".tgz"
+        print " ".join(msg)
+        os.remove(example.name + ".tgz")
+        myexit(1)
+
+    print "**** Successfully generated file ****: " + example.name + ".tgz"
+    os.system("rm -r -f " + wdname)

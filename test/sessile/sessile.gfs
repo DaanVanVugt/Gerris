@@ -1,0 +1,69 @@
+# Title: Sessile drop
+# 
+# Description:
+#
+# A sessile drop is a drop of liquid at rest on a solid surface. In
+# the absence of gravity, the shape of the drop is controlled by
+# surface tension only. An important parameter is the "contact angle"
+# $\theta$ between the solid surface and the interface. In the absence
+# of gravity, the drop is hemispherical and it is easy to show that
+# the relation between the radius of the drop $R$ and its volume $V$
+# is (for two-dimensional drops)
+# $$V=R^2(\theta-\sin\theta\cos\theta)$$
+#
+# To test this relation, a drop is initialised as a half-disk
+# (i.e. the initial contact angle is 90$^\circ$) and the contact angle
+# is varied between 30 and 180$^\circ$. The drop oscillates and
+# eventually relaxes to its equilibrium position. This equilibrium is
+# exact to within machine accuracy (for most contact angles). The
+# curvature along the interface is constant. Figure \ref{rk}
+# illustrates the dependence of the equilibrium radius $R$ as a
+# function of the contact angle $\theta$ (for a constant volume
+# $V$). The method is between first- and second-order accurate (Figure
+# \ref{convergence}).
+#
+# \begin{figure}[htbp]
+# \caption{\label{rk}Dependence of the equilibrium radius on the
+# contact angle for several spatial resolutions.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{rk.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{convergence}Convergence of the equilibrium curvature
+# with the spatial resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{convergence.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh sessile.sh
+# Version: 110912
+# Required files: sessile.sh error-6.ref
+# Running time: 6 minutes
+# Generated files: rk.eps convergence.eps
+1 0 GfsSimulation GfsBox GfsGEdge { x = 0.5 y = 0.5 } {
+    Refine LEVEL
+    VariableTracerVOFHeight T
+    VariableCurvature K T
+    SourceTension T 1. K
+    PhysicalParams { alpha = 1./(T + 0.01*(1. - T)) }
+    SourceViscosity 0.2/(T + 100.*(1. - T))
+    InitFraction T (- ellipse (0, 0, 0.3, 0.3))
+    AdaptFunction { istep = 1 } { cmax = 0 maxlevel = LEVEL } (T > 0 && T < 1)
+    Time { end = 3 }
+    EventStop { istep = 10 } K 1e-5 DK
+    OutputScalarNorm { istep = 10 } v-ANGLE { v = Velocity }
+    OutputScalarStats { istep = 10 } k { v = (T > 0.05 && T < 0.95 ? K : NODATA) }
+    OutputScalarSum { start = end } vol { v = T }
+#    OutputSimulation { istep = 10 } stdout
+    OutputSimulation { start = end } end-ANGLE.gfs
+}
+GfsBox {
+    bottom = Boundary {
+	BcAngle T ANGLE 
+    }
+    left = Boundary # axis of symmetry
+}

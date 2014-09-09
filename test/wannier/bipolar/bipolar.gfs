@@ -1,0 +1,131 @@
+# Title: Flow between eccentric cylinders using bipolar coordinates
+#
+# Description:
+#
+# Same case as before but using \htmladdnormallinkfoot{bipolar
+# coordinates}{http://en.wikipedia.org/wiki/Bipolar\_coordinates} to
+# map the rectangular computational domain to the circular boundaries
+# of the physical domain.
+#
+# With these coordinates, solid embedded boundaries are not required
+# and the number of grid points across the gap is constant (Figure
+# \ref{mesh}). This markedly improves the convergence rate compared to
+# the case using embedded solid boundaries (Figure \ref{convergence}).
+#
+# Note also that this convergence can only be obtained when including
+# the non-trivial viscous metric terms induced by the coordinate
+# transformation.
+#
+# \begin{figure}[htbp]
+# \caption{\label{mesh}Bipolar computational mesh for Stokes flow
+# between eccentric cylinders.}
+# \begin{center}
+# \includegraphics[width=\hsize]{mesh.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{convergence}Convergence of the maximum and RMS
+# errors on velocity magnitude toward the analytical solution.}
+# \begin{center}
+# \includegraphics[width=\hsize]{convergence.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh bipolar.sh bipolar.gfs
+# Version: 111108
+# Required files: bipolar.sh error.ref mesh.gfv
+# Running time: 2 minutes
+# Generated files: convergence.eps mesh.eps
+#
+8 8 GfsSimulation GfsBox GfsGEdge { x = 0.5 y = 0.5 } {
+#  GModule hypre
+  Time { end = 100 }
+
+  # Bipolar coordinates. see http://en.wikipedia.org/wiki/Bipolar_coordinates
+  Metric M {
+      x = sinh(rx/2. + 1.)/(cosh(rx/2. + 1.) - cos (M_PI*ry/4.))
+      y = sin(M_PI*ry/4.)/(cosh(rx/2. + 1.) - cos (M_PI*ry/4.))
+  }
+  Refine LEVEL
+  ApproxProjectionParams { tolerance = 1e-6 }
+  AdvectionParams { scheme = none }
+  SourceViscosity 1.
+
+  Global {
+      // The radii R1,R2 and center positions X1,X2 below
+      // correspond to the extent of the computational domain
+      // i.e. tau=rx/2+1    in [1:1.5]
+      // and  sigma=pi*ry/4 in [0:2*pi]
+
+      #define R1 (1./sinh(1.5))
+      #define R2 (1./sinh(1.))
+      #define X1 (1./tanh(1.5))
+      #define X2 (1./tanh(1.))
+      #define ECC (X2 - X1)
+      #include "../wannier.c"
+  }
+
+  EventStop { step = 1e-2 } U 1e-4 DU
+
+#  OutputProjectionStats { istep = 1 } stderr
+#  OutputDiffusionStats { istep = 1 } stderr
+#  OutputScalarNorm { istep = 1 } stderr { v = DU }
+
+  OutputScalarNorm { istep = 1 } du { v = DU }
+  # Note that the U and V components are defined in the "normalised
+  # basis" so that U^2+V^2 is independent from the basis (which is why
+  # we chose to compute the error on the norm of the velocity rather
+  # than on individual components).
+  OutputErrorNorm { start = end } { awk '{ print LEVEL,$5,$7,$9 }' } { v = Velocity } {
+      s = {
+	  double p, u, v;
+	  // we need to rotate coordinates by 90 degrees
+	  psiuv (y, x - X2, R1, R2, ECC, 1., 0., &u, &v, &p);
+	  return sqrt (u*u + v*v);
+      }
+      v = EU
+  }
+  OutputSimulation { start = end } end-LEVEL.gfs
+}
+GfsBox {
+    left = Boundary { BcDirichlet V 0 }
+    right = Boundary { BcDirichlet V 1 }
+}
+GfsBox {
+    left = Boundary { BcDirichlet V 0 }
+    right = Boundary { BcDirichlet V 1 }
+}
+GfsBox {
+    left = Boundary { BcDirichlet V 0 }
+    right = Boundary { BcDirichlet V 1 }
+}
+GfsBox {
+    left = Boundary { BcDirichlet V 0 }
+    right = Boundary { BcDirichlet V 1 }
+}
+GfsBox {
+    left = Boundary { BcDirichlet V 0 }
+    right = Boundary { BcDirichlet V 1 }
+}
+GfsBox {
+    left = Boundary { BcDirichlet V 0 }
+    right = Boundary { BcDirichlet V 1 }
+}
+GfsBox {
+    left = Boundary { BcDirichlet V 0 }
+    right = Boundary { BcDirichlet V 1 }
+}
+GfsBox {
+    left = Boundary { BcDirichlet V 0 }
+    right = Boundary { BcDirichlet V 1 }
+}
+1 2 top
+2 3 top
+3 4 top
+4 5 top
+5 6 top
+6 7 top
+7 8 top
+8 1 top

@@ -1,0 +1,101 @@
+#!/bin/sh
+
+# see ../src/darcsversion.sh
+darcsversion()
+{
+    darcs changes --last=1 --xml-output | \
+	awk 'BEGIN{RS=" ";FS="="}{if ($1 == "date") print substr($2,4,6);}'
+}
+
+usage()
+{
+	cat <<EOF
+Usage: darcs2dist [OPTIONS] PACKAGE REPOSITORY URL
+
+Updates a SourceForge snapshot using the given darcs repository.
+
+EOF
+	exit $1
+}
+
+transfer()
+{
+    package=$1
+    version=$2
+    login=$3
+    dir=$4
+    if test x$dir = x; then
+	dir=$login
+	if rm -f $dir/tarballs/$package-snapshot-*.tar.gz && \
+	    cp $package-snapshot-$version.tar.gz $dir/tarballs && \
+	    rm -f $dir/$package-snapshot.tar.gz && \
+	    ln -s $dir/tarballs/$package-snapshot-$version.tar.gz $dir/$package-snapshot.tar.gz ; \
+	    then :
+	else
+	    exit 1
+	fi
+    else
+	if cat <<EOF | sftp $login; then :
+     cd $dir/tarballs
+     -rm $package-snapshot-*.tar.gz
+     put $package-snapshot-$version.tar.gz
+     cd $dir
+     -rm $package-snapshot.tar.gz
+     symlink tarballs/$package-snapshot-$version.tar.gz $package-snapshot.tar.gz
+EOF
+	else
+	    exit 1
+	fi
+    fi
+}
+
+if test $# -lt 3; then
+	usage 1 1>&2
+fi
+
+package=$1
+repo=$2
+url=$3
+
+wrkdir=`mktemp -d /tmp/darcs2dist.XXXXXX`
+cd $wrkdir
+if darcs get $repo $package > msg 2>&1 ; then
+    cd $package
+    version=`darcsversion`
+    login=`echo $url | awk 'BEGIN{FS=":"}{print $1}'`
+    dir=`echo $url | awk 'BEGIN{FS=":"}{print $2}'`
+    if test x$dir = x; then
+     	if test -f $login/tarballs/$package-snapshot-$version.tar.gz; then
+	    # tarball already at latest version
+            rm -r -f $wrkdir
+	    exit 0
+	fi
+    fi
+else
+    cat msg
+    rm -r -f $wrkdir
+    exit 1
+fi
+
+if ( cd $wrkdir/$package && \
+    version=`darcsversion` && \
+    login=`echo $url | awk 'BEGIN{FS=":"}{print $1}'` && \
+    dir=`echo $url | awk 'BEGIN{FS=":"}{print $2}'` && \
+    sh autogen.sh && \
+    make && \
+    make dist && \
+    tar xzf $package-*.tar.gz && \
+    cd  $package-[0-9].[0-9].[0-9] && \
+    ./configure && make && cd .. && \
+    rm -r -f $package-[0-9].[0-9].[0-9] && tar xzf $package-*.tar.gz && \
+    mv $package-[0-9].[0-9].[0-9] $package-snapshot-$version && \
+    tar chof - $package-snapshot-$version | gzip --best -c > $package-snapshot-$version.tar.gz && \
+    transfer $package $version $login "$dir"
+	) > msg 2>&1; then :
+else
+    cat msg
+    rm -r -f $wrkdir
+    exit 1
+fi
+
+rm -r -f $wrkdir

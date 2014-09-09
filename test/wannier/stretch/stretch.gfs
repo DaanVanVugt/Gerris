@@ -1,0 +1,82 @@
+# Title: Flow between eccentric cylinders on a stretched grid
+#
+# Description:
+#
+# Here we test that the Wannier solution is recovered on a grid
+# stretched in one direction. This validates the combination of
+# stretched grids and embedded solid boundaries with Dirichlet
+# conditions.
+#
+# \begin{figure}[htbp]
+# \caption{\label{convergence}Convergence of the maximum and RMS
+# errors on velocity magnitude toward the analytical solution.}
+# \begin{center}
+# \includegraphics[width=\hsize]{convergence.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh ../wannier.sh stretch.gfs
+# Version: 120229
+# Required files: error.ref streamlines.gfv
+# Running time: 1 minute
+# Generated files: convergence.eps
+
+# The strange choices for radii R1,R2 and eccentricity ECC come from
+# the 'bipolar' variant
+Define R1 (1./sinh(1.5))
+Define R2 (1./sinh(1.))
+Define X1 (1./tanh(1.5))
+Define X2 (1./tanh(1.))
+Define ECC (X2 - X1)
+
+2 1 GfsSimulation GfsBox GfsGEdge { y = -0.5 } {
+  MetricStretch {} { sy = 0.5 }
+  PhysicalParams { L = 2.5 }
+  # Upper bound on time, it should converge much before this
+  Time { end = 100 }
+  Refine LEVEL
+  Solid (- ellipse (0.,ECC,R2,R2))
+  Solid (ellipse (0.,0.,R1,R1))
+  ApproxProjectionParams { tolerance = 1e-6 }
+  AdvectionParams { scheme = none }
+  SourceViscosity 1
+  # Fixed outer cylinder and rotating inner cylinder (tangential velocity unity)
+  SurfaceBc U Dirichlet (x*x + y*y > 1.5*R1*R1 ? 0. : - ay/R1)
+  SurfaceBc V Dirichlet (x*x + y*y > 1.5*R1*R1 ? 0. :   ax/R1)
+  # Stop when stationnary
+  EventStop { step = 1e-2 } U 1e-4 DU
+
+  Global {
+      #include "../wannier.c"
+      double psi (double x, double y) {
+	  double p, u, v;
+	  psiuv (x, y, R1, R2, ECC, 1., 0., &u, &v, &p);
+	  return p;
+      }
+      double ux (double x, double y) {
+	  double p, u, v;
+	  psiuv (x, y, R1, R2, ECC, 1., 0., &u, &v, &p);
+	  return u;
+      }
+      double uy (double x, double y) {
+	  double p, u, v;
+	  psiuv (x, y, R1, R2, ECC, 1., 0., &u, &v, &p);
+	  return v;
+      }
+  }
+
+  OutputScalarNorm { istep = 1 } du { v = DU }
+  OutputErrorNorm { start = end } { awk '{ print LEVEL,$5,$7,$9 }' } { v = Velocity } {
+      s = {
+	  double p, u, v;
+	  psiuv (x, y - ECC, R1, R2, ECC, 1., 0., &u, &v, &p);
+	  return sqrt (u*u + v*v);
+      }
+      v = EU
+  }
+  OutputSimulation { start = end } end-LEVEL.gfs
+}
+GfsBox {}
+GfsBox {}
+1 2 top

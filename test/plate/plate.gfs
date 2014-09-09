@@ -1,0 +1,27 @@
+# Title: Potential flow around a thin plate
+#
+# Description:
+#
+# This test case triggers an instability if the cell-centered pressure
+# gradient used in the approximate projection is not computed using
+# solid-fraction-weighted averages of the face-centered pressure
+# gradients.
+#
+# Author: St\'ephane Popinet
+# Command: sh plate.sh plate.gfs
+# Version: 1.1.2
+# Required files: plate.sh
+#
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+  Time { iend = 30 dtmax = 1e-2 }
+  Refine 5
+  RefineSolid 6
+  Solid (cube(0,0,0,0.5)) { sy = 0.06251 tx = 0.031249 ty = -0.015 }
+  AdvectionParams { scheme = none }
+  Init {} { U = 1 }
+  OutputScalarNorm { start = end } stdout { v = Velocity } 
+}
+GfsBox {
+  left = Boundary { BcDirichlet U 1 }
+  right = BoundaryOutflow 
+}

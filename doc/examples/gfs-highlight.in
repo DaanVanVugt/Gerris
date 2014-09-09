@@ -1,0 +1,108 @@
+#!/bin/sh
+
+wiki="http:\/\/gfs.sf.net\/wiki\/index.php"
+title=""
+css="darcs.css"
+
+path="@prefix@/share/gerris"
+
+usage()
+{
+	cat <<EOF
+Usage: gfs-highlight [OPTIONS] < input.gfs > output.html
+
+Syntax highlighting/hypertext linking of Gerris simulation files.
+
+Options:
+	[--title=TITLE] sets the page title
+	[--css=FILE]    sets the CSS stylesheet filename
+        [--comments]    include comment block at the start
+        [--bold]        use bold instead of links
+        [--help]        displays this message and exits
+EOF
+	exit $1
+}
+
+comment=0
+bold=0
+while test $# -gt 0; do
+  case "$1" in
+  -*=*) optarg=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+  *) optarg= ;;
+  esac
+
+  case $1 in
+    --title=*)
+      title=$optarg
+      ;;
+    --css=*)
+      css=$optarg
+      ;;
+    --comment)
+      comment=1
+      ;;
+    --bold)
+      bold=1
+      ;;
+    --help)
+      usage 0 1>&2
+      ;;
+    *)
+      usage 0 1>&2
+      ;;
+  esac
+  shift
+done
+
+if test "x$title" = "x"; then :
+cat <<EOF
+<tt class="gfs">
+EOF
+else
+cat <<EOF
+<html>
+<head>
+<title>$title</title>
+<link rel="stylesheet" type="text/css" href="$css">
+</head>
+<body><tt class="gfs">
+EOF
+fi
+
+file=`mktemp gfs-highlight.XXXXXX`
+ln -s -f $path/gfs.lang $file
+
+awk -v comment=$comment 'BEGIN{ infile=comment } {
+       if ($2 == "Generated" && $3 == "files:") {
+         infile = 1; 
+         while ($1 == "#") getline; 
+         print $0; 
+       }
+       else if (infile) 
+         print $0;
+       else if ($5 == "GfsGEdge") {
+         infile = 1;
+         print $0;
+       }
+     }' | \
+source-highlight --lang-def=$file --out-format=html-css | \
+(
+if test $bold = "1"; then
+    sed "s/\"classname\">\(Gfs\)\{0,1\}\([a-zA-Z0-9_]*\)<\/span>/"classname"><b>\1\2<\/b><\/span>/g"
+else
+    sed "s/\"classname\">\(Gfs\)\{0,1\}\([a-zA-Z0-9_]*\)<\/span>/"classname"><a href=\"$wiki\/Gfs\2\">\1\2<\/a><\/span>/g"
+fi
+)
+
+rm -f $file
+
+if test "x$title" = "x"; then :
+cat <<EOF
+</tt>
+EOF
+else
+cat <<EOF
+</tt></body>
+</html>
+EOF
+fi

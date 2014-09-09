@@ -1,0 +1,55 @@
+# Title: Convergence of the Godunov advection scheme
+#
+# Description:
+#
+# A non-trivial initial tracer distribution is advected by a constant
+# velocity field corresponding to a solid rotation around the center
+# of the domain. The tracer field after one revolution is compared to the
+# initial tracer field to compute the error norms.
+#
+# Figure \ref{error} and \ref{order} illustrate the convergence of the
+# solution with increased resolution. Close to second-order
+# convergence is obtained.
+#
+# \begin{figure}[htbp]
+# \caption{\label{error}Evolution of the error as a function of resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{order}Corresponding convergence order.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{order.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh advection.sh advection.gfs
+# Version: 091022
+# Required files: advection.sh error.ref order.ref
+# Generated files: error.eps order.eps
+#
+1 0 GfsAdvection GfsBox GfsGEdge {} {
+  Time { end = 0.785398 }
+  Refine LEVEL
+  VariableTracer T { gradient = gfs_center_gradient }
+  Init {} {
+    T = {
+      double r2 = x*x + y*y; 
+      double coeff = 20. + 20000.*r2*r2*r2*r2;
+      return (1. + cos(20.*x)*cos(20.*y))*exp(-coeff*r2)/2.;
+    }
+  }
+  VariableStreamFunction Psi -4.*(x*x + y*y)
+  OutputErrorNorm { start = end } { awk '{ print LEVEL " " $5 " " $7 " " $9}' } { v = T } {
+    s = {
+      double r2 = x*x + y*y; 
+      double coeff = 20. + 20000.*r2*r2*r2*r2;
+      return (1. + cos(20.*x)*cos(20.*y))*exp(-coeff*r2)/2.;
+    }
+  }
+  OutputScalarSum { istep = 1 } t { v = T }
+}
+GfsBox {}

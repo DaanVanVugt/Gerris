@@ -1,0 +1,50 @@
+# GfsView 3D
+View {
+  tx = 0.304638 ty = 0.282965
+  sx = 1 sy = 1 sz = 1
+  q0 = -0.217532 q1 = -0.386273 q2 = -0.14609 q3 = 0.884381
+  fov = 3.13678
+  r = 1 g = 1 b = 1
+  res = 1
+  lc = 0.001
+  reactivity = 0.1
+}
+VOF {
+  r = 1 g = 1 b = 1
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+} {
+  n.x = 0 n.y = 0 n.z = 1
+  pos = 0
+} Level {
+  amin = 0 min = 2
+  amax = 0 max = 10
+  cmap = Jet
+} T {
+  reversed = 0
+  use_scalar = 1
+  draw_edges = 1
+  interpolate = 0
+}
+Symmetry {
+  r = 0 g = 0 b = 0
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+} {
+  n.x = 0 n.y = 1 n.z = 0
+  pos = -0.5
+}
+Symmetry {
+  r = 0 g = 0 b = 0
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+} {
+  n.x = 0 n.y = 0 n.z = 1
+  pos = -0.5
+}

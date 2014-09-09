@@ -1,0 +1,79 @@
+# Title: Creeping Couette flow between cylinders
+#
+# Description:
+#
+# A polar coordinate system is used to solve the flow between two
+# concentric cylinders. The inner cylinder is rotating and the outer
+# cylinder is fixed. The tangential velocity profile is illustrated in
+# Figure \ref{prof}, together with the profile of a diffusive tracer
+# with matching boundary conditions. The tracer profile involves a
+# $\log r$ dependency whereas the velocity profile is polynomial in
+# $r$. The difference is due to the metric terms appearing when
+# diffusing vector quantities.
+#
+# Figure \ref{convergence} illustrates the convergence toward the
+# analytical solution with spatial resolution.
+#
+# \begin{figure}[htbp]
+# \caption{\label{prof}Tangential velocity and tracer concentration as
+# functions of radial position}
+# \begin{center}
+# \includegraphics[width=\hsize]{profile.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{convergence}Convergence of the error norms with
+# spatial resolution.}
+# \begin{center}
+# \includegraphics[width=\hsize]{convergence.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh annulus.sh annulus.gfs
+# Version: 111107
+# Required files: annulus.sh error.ref
+# Running time: 30 seconds
+# Generated files: convergence.eps profile.eps
+#
+1 1 GfsSimulation GfsBox GfsGEdge {} {
+    # the polar coordinates. rx and ry vary between [-0.5:0.5]
+    # the radius varies between [0.25:0.5]
+    Metric M {
+	x = (rx/4. + 0.375)*cos(ry)
+	y = (rx/4. + 0.375)*sin(ry)
+    }
+    VariableTracer T { scheme = none }
+    SourceDiffusion T 1
+    Time { dtmax = 1e-2 }
+    Refine LEVEL
+    ApproxProjectionParams { tolerance = 1e-6 }
+    AdvectionParams { scheme = none }
+    SourceViscosity 1
+    EventStop { step = 1e-2 } V 1e-5 DV
+
+    OutputScalarNorm { istep = 1 } dv { v = DV }
+    OutputErrorNorm { start = end } { awk '{print LEVEL,$5,$7,$9}' } { v = V } {
+	s = {
+	    double r = rx/4. + 0.375;
+	    // the analytical solution for the tangential velocity
+	    return r*((0.5/r)*(0.5/r) - 1.)/((0.5/0.25)*(0.5/0.25) - 1.);
+	}
+	v = E
+    }
+    OutputSimulation { start = end } end-LEVEL.gfs
+    Init { start = end } { Rx = rx }
+    OutputSimulation { start = end } end-LEVEL.txt { format = text }
+}
+GfsBox {
+    left  = Boundary { 
+	BcDirichlet V 0.25 
+	BcDirichlet T 0.25 
+    }
+    right = Boundary { 
+	BcDirichlet V 0. 
+	BcDirichlet T 0
+    }
+}
+1 1 top

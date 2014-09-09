@@ -1,0 +1,82 @@
+# Title: Tsunami runup onto a plane beach
+#
+# Description:
+#
+# This test case is the \htmladdnormallinkfoot{first benchmark
+# problem}{http://isec.nacse.org/workshop/2004\_cornell/bmark1.html} of
+# "The Third International Workshop on Long-Wave Runup Models". A
+# solitary wave runs up a plane inclined beach. Reference solutions
+# are provided by the initial-value-problem (IVP) technique introduced
+# by Carrier et al \cite{carrier2003}.
+#
+# Figure \ref{profile} illustrates the topography and wave profiles at
+# $t=160$, $175$ and $220$ seconds. Figure \ref{order} gives the
+# convergence in wave elevation error with spatial resolution.
+#
+# \begin{figure}[htbp]
+# \caption{\label{profile}Topography, analytical (lines) and numerical
+# (symbols) wave profiles for the times indicated in the legend. The
+# numerical results are for a maximum spatial resolution of $\approx
+# 3.6$ metres.}
+# \begin{center}
+# \includegraphics[width=\hsize]{profile.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{order}Convergence of the average and maximum errors
+# with spatial resolution. The errors are for the predicted wave
+# profile at $t=220$ sec.}
+# \begin{center}
+# \includegraphics[width=\hsize]{order.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Version: 100406
+# Command: sh shore.sh
+# Required files: shore.sh init.cgd t160.csv t175.csv t220.csv convergence.ref
+# Generated files: profile.eps order.eps
+#
+Define MINLEVEL 7
+Define DRY 1e-3
+
+1 0 GfsRiver GfsBox GfsGEdge { x = 0.3333333 } {
+    PhysicalParams { L = 60000 }
+
+    # Set a solid boundary close to the top boundary to limit the
+    # domain width to less than one cell (i.e. a 1D domain)
+    RefineSolid (MINLEVEL + (LEVEL - MINLEVEL)*(1. - x/50000.))
+    Solid (y - 60000.*(0.5 - 0.99/pow(2,LEVEL)))
+
+    # Set the topography Zb and the initial water surface elevation P
+    Init {} {
+	Zb = -x/10.
+	P = init.cgd
+	P = MAX (0., P - Zb)
+    }
+    PhysicalParams { g = 9.81 }
+
+    AdvectionParams {
+	gradient = gfs_center_sweby_gradient
+    }
+
+    # Force the flow to stay 1D
+    Init { istep = 10 } { V = 0 }
+
+    Time { end = 220 }
+
+    # OutputTime { istep = 10 } stderr
+    OutputSimulation { start = 0 } sim-LEVEL-%g.txt { format = text }
+    OutputSimulation { start = 160 } sim-LEVEL-%g.txt { format = text }
+    OutputSimulation { start = 175 } sim-LEVEL-%g.txt { format = text }
+    OutputSimulation { start = 220 } sim-LEVEL-%g.txt { format = text }
+} {
+    dry = DRY
+    time_order = 2
+}
+GfsBox {
+    left = Boundary
+    right = Boundary
+    top = Boundary
+}

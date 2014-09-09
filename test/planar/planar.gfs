@@ -1,0 +1,73 @@
+# Title: Dielectric-dieletric planar balance
+#
+# Description:
+#
+# Checks that electrohydrodynamic balance is accurately computed for a
+# planar interface.
+#
+# Author: Jose M. L\'opez-Herrera S\'anchez and St\'ephane Popinet
+# Command: gerris2D planar.gfs
+# Version: 101020
+# Required files:
+GModule electrohydro
+
+1 0 GfsElectroHydro GfsBox GfsGEdge {} {
+    VariableTracerVOF T
+    InitFraction T (-y)
+    Init {} { Phi = (y < 0. ? (y/2.+1/4.) : 3.*y/2.+1./4.) }
+    Refine 5
+    
+    Time { iend = 1 dtmax = 1 }
+    ProjectionParams { tolerance = 1e-7 }  
+    ApproxProjectionParams { tolerance = 1e-7 }
+    SourceElectric
+
+    OutputTime { istep = 1 } stderr
+    OutputSimulation { start = end } result.txt { format = text }
+    OutputScalarStats { start = end } p { v = P }
+    OutputScalarStats { start = end } ey { v = Ey }
+    OutputScalarNorm { start = end } v { v = V }
+    EventScript { start = end } { 
+       if awk '{
+              deltap = ($11 - $5) - 0.75
+              if (deltap < 0.)
+                deltap = - deltap;
+              if (deltap > 5e-8) { 
+                print "deltap:", deltap > "/dev/stderr"; 
+                exit (1); 
+              }
+            }' < p &&
+          awk '{
+              deltap = ($11 - $5) - 1.
+              if (deltap < 0.)
+                deltap = - deltap;
+              if (deltap > 0.) { 
+                print "deltaey:", deltap > "/dev/stderr"; 
+                exit (1); 
+              }
+            }' < ey &&
+          awk '{
+              if ($9 > 3.) { 
+                print "vmax:", $9 > "/dev/stderr"; 
+                exit (1); 
+              }
+            }' < v; then
+            exit 0;
+        else
+            exit $GFS_STOP;
+        fi
+    }
+} {
+    # Electric parameters
+    perm = 1./(T/3.+(1-T))
+    ElectricProjectionParams { tolerance = 1e-7 }
+}
+GfsBox {
+   top   = Boundary {
+       BcDirichlet Phi  1
+       BcDirichlet P 0
+   }
+   bottom = Boundary {
+       BcDirichlet Phi 0.       
+   }
+}

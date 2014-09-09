@@ -1,0 +1,154 @@
+# Title: Wind-driven stratified lake
+#
+# Description:
+#
+# We now consider the case of a stratified lake. To model the stable
+# thermal stratification often observed in lakes, we assume a vertical
+# density profile of the form
+# \[ \rho (z) = \rho_0 - H_{{\rm eaviside}} (z - H +
+#   H_{{\rm thermocline}}) \Delta \rho . \]
+# If $\Delta \rho / \rho_0$ is small compared to one, we can use a
+# Boussinesq approximation and this results in an additional source
+# term $- g' H_{{\rm eaviside}} (z - H + H_{{\rm thermocline}})$ for
+# the vertical component of velocity, with $g'$ the reduced gravity
+# \[ g' = \frac{\Delta \rho}{\rho_0} g. \]
+# Through dimensional arguments one can find that the equilibrium
+# slope $\alpha_t$ of the thermocline should verify the relation \[ g'
+# \alpha_t \propto \nu \tau, \] for vanishing $\alpha_t$.
+#
+# We then need to consider two additional independent dimensionless
+# parameters
+# \begin{itemize}
+#  \item $b = 1 - H_{{\rm thermocline}} / H$, set to $3 / 4$ in what follows,
+#  \item and the thermocline slope
+#  \[ \alpha_t = \frac{\nu \tau}{g' H} \]
+# \end{itemize}
+# If we assume parallel flow, an analytical solution can be sought for
+# the horizontal velocity profile in a vertical cross-section, of the
+# form
+# \begin{eqnarray*}
+#  u (z) = A_1 z^2 + B_1 z + C_1 &  & {\rm for} z > b,\\
+#  u (z) = A_2 z^2 + B_2 z + C_2 &  & {\rm for} z \leq b
+# \end{eqnarray*}
+# Using boundary and volume conservation conditions one easily finds
+# (for $b = 3 / 4$)
+# \begin{eqnarray*}
+#  u (z) = \frac{30 z^2 - 47 z + 18}{13} &  & {\rm for} z > 3 / 4,\\
+#  u (z) = \frac{- 2 z^2 + z}{13} &  & {\rm for} z \leq 3 / 4.
+# \end{eqnarray*}
+# This can be used to refine the estimates of the thermocline and surface
+# slopes. Assuming hydrostatic balance, the horizontal pressure gradient is
+# given by
+# \begin{eqnarray*}
+#  \partial_x p = g \alpha' &  & {\rm for} z > 3 / 4 + \alpha_t' x,\\
+#  \partial_x p = g \alpha' + g' \alpha_t'  &  & {\rm for} z \leq 3 / 4 +
+#  \alpha_t' x.
+# \end{eqnarray*}
+# Balancing the horizontal pressure gradients and viscous stress then gives
+# \begin{eqnarray*}
+#  \alpha' & = & \frac{60}{13} \alpha\\
+#  \alpha_t' & = & - \frac{64}{13} \alpha_t
+# \end{eqnarray*}
+#
+# The (pseudo) steady-state density perturbation is illustrated in
+# Figure \ref{drho} and the corresponding free-surface and thermocline
+# slopes in Figure \ref{thermo}.
+# 
+# Figure \ref{uprof} illustrates the velocity profile at the center of the
+# lake and Figure \ref{error} the rate of convergence with an
+# increasing number of layers.
+#
+# \begin{figure}[htbp]
+# \caption{\label{drho}Density perturbation $\Delta\rho$ for 64
+# layers. Numerical diffusion is most noticeable in the upwelling on
+# the left-hand-side.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{drho.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{uprof}Numerical and analytical velocity profiles at
+# the center of the lake.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{uprof.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{error}Convergence of the error between the numerical
+# and analytical solution with the number of layers.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{thermo}Profiles of (a) the free surface and (b)
+# the thermocline compared with the analytical solutions.}
+# \begin{center}
+# \begin{tabular}{cc}
+# \includegraphics[width=0.5\hsize]{free.eps} &
+# \includegraphics[width=0.5\hsize]{thermo.eps} \\
+# (a) & (b)
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh stratified.sh
+# Version: 121116
+# Running time: 70 seconds
+# Required files: stratified.sh error.ref field.awk thermo.awk
+# Generated files: uprof.eps error.eps drho.eps free.eps thermo.eps
+#
+
+# slope of the free surface
+Define ALPHA 1e-4
+# slope of the thermoclime
+Define ALPHAT 1e-3
+
+1 0 GfsRiver GfsBox GfsGEdge {} {
+    Layers NL
+    Refine LEVEL
+    InitMask {} (y < RATIO*(0.5 - 1./pow(2,LEVEL)))
+    VariableTracer DRHO
+    PhysicalParams {
+	L = RATIO g = 1./(ALPHA*RE)
+	alpha = 1./(1. + DRHO)
+    }
+    Init {} {
+	P = 1
+	DRHO = (z > 0.75 ? 0 : ALPHA/ALPHAT)*P/NL
+    }
+    Time { end = 100 }
+    OutputSimulation { start = end } end-NL.txt { format = text }
+    OutputSimulation { start = end } {
+	awk '{
+  	  nl = NL;
+          if ($1 == "#") {
+            for (i = 2; i <= NF; i++) {
+              split($i,a,":")
+              if (a[2] == "U0")
+                start = a[1];
+            }
+          }
+          else if ($1 == RATIO/2**(LEVEL + 1)) {
+            dz = $4/nl;
+  	    for (i = 0; i < nl; i++) {
+              z = dz*(0.5+i)
+              print $1,$2,z,$(start+i)/dz
+            }
+          }
+        }' > uprof-NL
+    } { format = text }
+} {
+    # vertical viscosity
+    nu = 1./RE
+    # Neumann condition at the surface
+    dut = 1.
+}
+GfsBox {
+    right = Boundary
+    left = Boundary
+}

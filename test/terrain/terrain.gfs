@@ -1,0 +1,84 @@
+# Title: Terrain reconstruction
+#
+# Description:
+#
+# The terrain module is used to reconstruct a "terrain" map from
+# discrete samples of its analytical description:
+# $$z(r) = r^2/8+\cos(\pi r)/2$$
+# A central area is sampled at high resolution and the surrounding
+# area at lower resolution to test the accuracy of the reconstruction
+# scheme when mixing terrain datasets at high- and low-resolutions.
+#
+# The reconstruction scheme converges initially but diverges when the
+# maximum spatial resolution becomes finer than the sampling
+# resolution of the (coarsest) terrain database. This divergence is
+# due to smoothing errors when interpolating the terrain data from the
+# coarse (database-resolved) grid to the fine grid. The errors remain
+# low however.
+#
+# Figures \ref{error}.(a) and \ref{error}.(b) illustrate the convergence
+# toward the analytical solution of the terrain reconstructed using
+# \htmladdnormallinkfoot{GfsVariableTerrain}{http://gfs.sourceforge.net/wiki/index.php/GfsVariableTerrain}
+# and
+# \htmladdnormallinkfoot{GfsRefineTerrain}{http://gfs.sourceforge.net/wiki/index.php/GfsRefineTerrain}
+# respectively.
+#
+# \begin{figure}[htbp]
+# \caption{\label{error}Convergence of relative error norms toward the
+# analytical solution for terrains reconstructed using: a)
+# GfsVariableTerrain, b) GfsRefineTerrain.}
+# \begin{center}
+# \begin{tabular}{cc}
+# \includegraphics[width=0.45\hsize]{error-t.eps} &
+# \includegraphics[width=0.45\hsize]{error-h.eps} \\
+# (a) & (b)
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh terrain.sh
+# Version: 120426
+# Required files: terrain.sh error-t.ref error-h.ref
+# Running time: 5 seconds
+# Generated files: error-t.eps error-h.eps
+#
+1 0 GfsRiver GfsBox GfsGEdge {} {
+    PhysicalParams { L = 8 }
+    GModule terrain
+    RefineTerrain LEVEL H {
+	basename = terrain,terrain-high
+    } TRUE
+    VariableTerrain T {
+	basename = terrain,terrain-high
+    }
+    Time { end = 0 }
+    OutputErrorNorm { start = end } { awk '{ print LEVEL,$5,$7,$9 }' >> error-t } { v = T } {
+	s = {
+	    double r = sqrt (x*x + y*y);
+	    return r*r/8.+cos(M_PI*r)/2.;
+	}
+	w = (fabs (x) < 3.8 && fabs (y) < 3.8)
+	relative = 1
+	v = Et
+    }
+    OutputErrorNorm { start = end } { awk '{ print LEVEL,$5,$7,$9 }' >> error-h } { v = H0 } {
+	s = {
+	    double r = sqrt (x*x + y*y);
+	    return r*r/8.+cos(M_PI*r)/2.;
+	}
+	w = (fabs (x) < 3.8 && fabs (y) < 3.8)
+	relative = 1
+	v = Eh
+    }
+    OutputSimulation { start = end } {
+	awk '{
+           if ($1 != "#") {
+             r = sqrt ($1*$1 + $2*$2);
+             print r,$4,$5,$6,$7;
+           }
+        }' | sort -n -k 1,2 > end-LEVEL.txt
+    } { format = text variables = T,H0,Et,Eh }
+    OutputSimulation { start = end } end-LEVEL.gfs
+}
+GfsBox {}

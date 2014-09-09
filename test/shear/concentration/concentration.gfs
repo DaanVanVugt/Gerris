@@ -1,0 +1,111 @@
+# Title: Time-reversed advection of a VOF concentration
+#
+# Description:
+#
+# A similar test but with the addition of a concentration field (C)
+# associated with the VOF tracer (i.e. the phase with T > 0). The
+# initial concentration field is a Gaussian bump. The maximum of the bump
+# is located on the VOF interface to emphasise errors in the advection
+# of the VOF concentration. For reference a standard (Godunov) tracer
+# (G) is added, initialised with the same initial Gaussian
+# bump. Ideally C should match G when T > 0 and both C and G
+# should return to the initial Gaussian distribution at $t=5$.
+#
+# The VOF interface and tracer fields are illustrated in Figure
+# \ref{evolution}. The corresponding convergence of the error norms
+# with spatial resolution is illustrated in Figure \ref{convergence}.
+#
+# The VOF tracer is conserved to within $10^{-4}$, C to within
+# $2\times 10^{-5}$ (at the coarsest resolution) and G exactly.
+#
+# \begin{figure}[htbp]
+# \caption{\label{evolution}VOF interface and tracer fields at $t=2.5$
+# (top row) and $t=5$ (bottom row). The green line is the
+# VOF-reconstructed interface. Left column: VOF concentration field
+# C. Right column: Godunov tracer G. 7 levels of refinement.}
+# \begin{center}
+# \begin{tabular}{cc}
+# \includegraphics[width=0.45\hsize]{t1-half.eps} &
+# \includegraphics[width=0.45\hsize]{t2-half.eps} \\
+# \includegraphics[width=0.45\hsize]{t1-end.eps} &
+# \includegraphics[width=0.45\hsize]{t2-end.eps}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{convergence}Convergence of the error with spatial
+# resolution for the various fields.}
+# \begin{center}
+# \includegraphics[width=\hsize]{convergence.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh concentration.sh
+# Version: 111005
+# Required files: concentration.sh convergence.ref convergence1.ref convergence2.ref t1.gfv t2.gfv
+# Generated files: convergence.eps t1-end.eps t1-half.eps t2-end.eps t2-half.eps
+#
+Define CIRCLE (ellipse (0, -.236338, 0.2, 0.2))
+Define GAUSSIAN (exp(-100.*((x + 0.2)*(x + 0.2) + (y + .236338)*(y + .236338))))
+# Define CIRCLE 1
+
+1 0 GfsAdvection GfsBox GfsGEdge {} {
+    Time { end = 5 }
+    Refine LEVEL
+    VariableTracerVOFHeight T
+    VariableVOFConcentration C T
+    VariableTracer G
+    InitFraction T CIRCLE
+    Init {} {
+	C = GAUSSIAN*T
+	G = GAUSSIAN
+    }
+    VariableStreamFunction {
+	step = 2.5 
+    } Psi (t < 2.5 ? 1. : -1.)*sin((x + 0.5)*M_PI)*sin((y + 0.5)*M_PI)/M_PI
+    AdaptGradient { istart = 1 istep = 1 } { cmax = 0 maxlevel = LEVEL } T
+    AdaptError { istart = 1 istep = 1 } { cmax = 1e-3 maxlevel = LEVEL } C
+    AdaptError { istart = 1 istep = 1 } { cmax = 1e-3 maxlevel = LEVEL } G
+    OutputScalarSum { istep = 1 } t { v = T }
+    OutputScalarSum { istep = 1 } t1 { v = C }
+    OutputScalarSum { istep = 1 } t2 { v = G }
+#    OutputSimulation { istep = 10 } stdout
+    
+    OutputSimulation { start = 2.5 } half-LEVEL.gfs    
+
+    EventScript { start = end } {
+	conservation() 
+        {
+	    if awk -v tolerance=$1 'BEGIN { min = 1.; max = -1.; }{ 
+              if ($5 > max) max = $5; 
+              if ($5 < min) min = $5; 
+            }END{ if (max - min > tolerance) { print max - min > "/dev/stderr"; exit (1); } }'; then
+		:
+	    else
+		exit $GFS_STOP;
+	    fi
+	}
+        conservation 1e-4 < t
+        conservation 2e-5 < t1
+        conservation 0. < t2
+    }
+
+    VariableTracer Tref
+    InitFraction { start = end } Tref CIRCLE
+    OutputErrorNorm { start = end } dt-LEVEL { v = T } {
+	s = Tref
+	v = DT
+    }
+    OutputErrorNorm { start = end } dt1-LEVEL { v = C } {
+	s = Tref*GAUSSIAN
+	v = DC
+    }
+    OutputErrorNorm { start = end } dt2-LEVEL { v = G } {
+	s = GAUSSIAN
+	v = DG
+    }
+    OutputSimulation { start = end } end-LEVEL.gfs    
+}
+GfsBox {}

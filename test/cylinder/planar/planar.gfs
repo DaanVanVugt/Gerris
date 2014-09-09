@@ -1,0 +1,92 @@
+# Title: Charge relaxation in a planar cross-section
+#
+# Description:
+#
+# Same problem but solved in a planar cross-section of the column.
+#
+# \begin{figure}[htbp]
+# \caption{\label{charge}Relative error on the
+# charge per unit of length of cylinder as a function of
+# resolution. (\% Error =$|1-Q(t)/Q_o)|$)}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{charge.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{efield} Steady-state electric field profile 
+# as a function of resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{efield.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{Error norms for the electric field.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: J.M. L\'opez-Herrera and S. Popinet
+# Command: sh ../cylinder.sh planar.gfs
+# Version: 100609
+# Required files: norms.ref
+# Running time: 25 seconds
+# Generated files: charge.eps efield.eps error.eps
+#
+
+GModule electrohydro
+
+1 0 GfsElectroHydro GfsBox GfsGEdge {} {
+    Global {
+        #define R0 0.1
+        #define rhoinic 0.5
+        #define K 3
+        #define E1 3
+        #define E2 1
+    }
+    Time { end = 35 dtmax=1.0 }
+
+    VariableTracerVOF T
+    GfsVariableTracer Rhoe
+    InitFraction T (R0*R0 - y*y - x*x)
+    AdaptGradient { istep = 1 } { cmax = 1e-4 minlevel = 5 maxlevel = LEVEL + 1 } T
+    PhysicalParams { L = 2 }
+    Init {} { Rhoe = rhoinic*T }  
+ 
+    EventStop { istep = 10 } Ex 0.001
+
+    SourceDiffusionExplicit Rhoe K*T Phi
+
+#    OutputTime { istep = 1 } stderr
+    OutputScalarSum { istep = 1 } { 
+       awk 'BEGIN { rhoinic = 0.5 ; R0 = 0.1 ; Q = rhoinic*R0*R0*3.141592654 }
+            { print $3,$5,100*sqrt((1.-$5/Q)*(1.-$5/Q)); fflush(stdout); }' > rhoe-LEVEL
+    } { v = Rhoe}
+    OutputSimulation { start = end } {
+	awk '{ if ($1 != "#") 
+                 print sqrt($2*$2+$1*$1),sqrt($4*$4+$5*$5); }' > prof-LEVEL
+    } { 
+	format = text 
+	variables = Ex,Ey 
+    }
+    OutputErrorNorm { start = end } norms-LEVEL { v = sqrt(Ex*Ex + Ey*Ey) } {
+	s = {
+	  double r = sqrt (x*x + y*y);
+          return (r < R0 ? 0 : 0.5*R0*R0*rhoinic/r);
+	}
+    }
+    OutputSimulation { start = end } result-LEVEL.gfs 
+} {
+    # Electric parameters
+    perm = E1*T+E2*(1.-T)
+    charge = Rhoe
+    GfsElectricProjectionParams { tolerance = 1e-7 }
+}
+GfsBox {
+    top = Boundary { BcDirichlet Phi 0 }
+    bottom = Boundary { BcDirichlet Phi 0 }
+    left = Boundary { BcDirichlet Phi 0 }
+    right = Boundary { BcDirichlet Phi 0 }
+}

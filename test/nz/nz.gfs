@@ -1,0 +1,74 @@
+# Title: Gravity waves in a realistic ocean basin
+#
+# Description:
+#
+# A tilted ocean surface is initialised in a realistic basin (the Cook
+# strait area in New Zealand). The surface oscillates
+# sending complex gravity waves reflecting off the coast and
+# bathymetry (Figure \ref{p}). No explicit dissipation is added and Figure
+# \ref{k} illustrates the good conservation of the total energy.
+#
+# This is a good test of the robustness of the method when dealing
+# with adaptively refined complex bathymetry.
+#
+# The robustness is controlled essentially by the way face-centred
+# velocity values are computed from cell-centred values.
+#
+# \begin{figure}[htbp]
+# \caption{\label{p}Surface height at $t = 2$.}
+# \begin{center}
+# \includegraphics[width=0.6\hsize]{p.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{k}Evolution of the kinetic energy.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{k.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: gerris3D nz.gfs
+# Version: 100323
+# Required files: nz.gfs bath.gts
+# Generated files: p.eps k.eps
+#
+# Use the "GfsOcean" model
+1 0 GfsOcean GfsBox GfsGEdge {} {
+    # Set the timestep to sthg small compared to the tidal period
+    Time { dtmax = 1e-2 end = 28.5 }
+    # Refine to six levels
+    Refine 6
+    # We want more accuracy in the projection than the default 1e-3
+    ApproxProjectionParams { tolerance = 1e-6 nitermax = 10 }
+    AdvectionParams { scheme = none }
+    Init {} { P = 1e-2*x }
+    # Bathymetry
+    Solid bath.gts
+    # Refine the coastline to 7 levels
+    RefineSurface 7 bath.gts { twod = 1 }
+    # Non-dimensional gravity
+    PhysicalParams { g = 19.62 }
+
+    OutputPPM { start = 2 } { convert ppm:- p.eps } { v = P min = -5e-3 max = 5e-3 }
+    OutputScalarSum { istep = 10 } k { v = Velocity2 }
+    EventScript { start = end } {
+        gnuplot <<EOF
+            set term postscript eps color lw 3 solid 20
+            set output 'k.eps'
+            set xlabel 'Time'
+            set ylabel 'Kinetic energy'
+            set grid
+            plot 'k' u 3:5 w l t ''
+EOF
+        if awk '{if ($5 > 6e-12) exit (1);}' < k ; then
+            return 0;
+        else
+            return $GFS_STOP;
+        fi
+    }
+}
+GfsBox {
+    front = Boundary
+}

@@ -1,0 +1,119 @@
+# Title: Lake-at-rest balance in an inclined domain with bipolar metric
+#
+# Description:
+#
+# Checks that the lake-at-rest equilibrium can be recovered on a
+# domain with a bipolar metric. The water depth at $t=200$ is
+# illustrated in Figure \ref{depth}.
+#
+# \begin{figure}[htbp]
+# \caption{\label{depth}Water depth at $t=200$. Bipolar mesh (black)
+# and isolines of water depth (red).}
+# \begin{center}
+# \includegraphics[width=\hsize]{still.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: gerris2D bipolar.gfs
+# Version: 120314
+# Required files: p.gfv mesh.gfv
+# Running time: 2 minutes
+# Generated files: still.eps
+8 8 GfsRiver GfsBox GfsGEdge { x = 0.5 y = 0.5 } {
+    PhysicalParams { g = 9.81 }
+
+    # Bipolar coordinates. see http://en.wikipedia.org/wiki/Bipolar_coordinates
+    Metric M {
+	x = 10.*sinh(rx/2. + 1.)/(cosh(rx/2. + 1.) - cos (M_PI*ry/4.))
+	y = 10.*sin(M_PI*ry/4.)/(cosh(rx/2. + 1.) - cos (M_PI*ry/4.))
+    }
+    Refine 4
+
+    Init {} {
+	Zb = x/10.
+	P = 12.1/(100. - 4.*M_PI)
+    }
+
+    Time { end = 200 }
+#    OutputSimulation { istep = 10 } stdout
+    SourceCoriolis 0 1.0e-01
+    OutputScalarNorm { start = end } u { v = U }
+    OutputErrorNorm { start = end } ep { v = P } {
+	s = MAX(0, 1.26 - x/10.)
+	unbiased = 1
+	relative = 1
+    }
+    GModule gfsview
+    OutputScalarSum { start = 0 } vol { v = Zb }
+    OutputView { start = end } p.gnu { format = Gnuplot } p.gfv
+    OutputView { start = end } mesh.gnu { format = Gnuplot } mesh.gfv
+    EventScript { start = end } {
+	status=0
+	if gnuplot <<EOF; then :
+        set term postscript eps lw 2 solid color
+        set output 'still.eps'
+        unset key
+        unset logscale
+        unset border
+        unset xtics
+        unset ytics
+        unset xlabel
+        unset ylabel
+        set size ratio -1
+        plot 'mesh.gnu' w l lc 0, 'p.gnu' w l lc 1
+EOF
+	else
+	    status=$GFS_STOP;
+	fi
+	if awk '{if ($9 > 8e-7) { print "u: " $9 > "/dev/stderr"; exit (1); }}' < u ; then :
+        else
+            status=$GFS_STOP;
+        fi
+	if awk '{if ($9 > 3e-4) { print "ep: " $9 > "/dev/stderr"; exit (1); }}' < ep ; then :
+        else
+            status=$GFS_STOP;
+        fi
+	exit $status
+    }
+}
+GfsBox {
+    left = Boundary
+    right = Boundary
+}
+GfsBox {
+    left = Boundary
+    right = Boundary
+}
+GfsBox {
+    left = Boundary
+    right = Boundary
+}
+GfsBox {
+    left = Boundary
+    right = Boundary
+}
+GfsBox {
+    left = Boundary
+    right = Boundary
+}
+GfsBox {
+    left = Boundary
+    right = Boundary
+}
+GfsBox {
+    left = Boundary
+    right = Boundary
+}
+GfsBox {
+    left = Boundary
+    right = Boundary
+}
+1 2 top
+2 3 top
+3 4 top
+4 5 top
+5 6 top
+6 7 top
+7 8 top
+8 1 top

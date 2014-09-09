@@ -1,0 +1,33 @@
+# Title: Mass conservation with solid boundary
+#
+# Description:
+#
+# A similar test but for tracers advected around a solid sphere.
+#
+# Author: St\'ephane Popinet
+# Command: sh axi.sh
+# Version: 1.3.0
+# Required files: axi.sh
+#
+1 0 GfsAxi GfsBox GfsGEdge {} {
+    Time { end = 0.55 }
+    Refine (x < 0. ? 7 : 8)
+    Init {} { U = 1 }
+    ApproxProjectionParams { tolerance = 1e-6 }
+    ProjectionParams { tolerance = 1e-6 }
+    Solid (ellipse (0., 0., 0.05, 0.05))
+    VariableTracerVOF T
+    VariableTracer T1
+    InitFraction T (- ellipse (-0.2, 0., 0.05, 0.05))
+    InitFraction T1 (- ellipse (-0.2, 0., 0.05, 0.05))
+    AdaptGradient { istep = 1 } { cmax = 1e-3 minlevel = 4 maxlevel = (x < 0. ? 7 : 8) } T1
+    OutputScalarSum { istep = 1 } srt { v = T }
+    OutputScalarSum { istep = 1 } srt1 { v = T1 }
+}
+GfsBox {
+    left = Boundary {
+	BcDirichlet U 1
+	BcDirichlet V 0
+    }
+    right = BoundaryOutflow
+}

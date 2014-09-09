@@ -1,0 +1,51 @@
+# Title: Wind-driven lake
+#
+# Description:
+#
+# A simple test of a wind-driven lake with a 1/10 mesh stretching
+# ratio. Due to the anisotropy of stretching, the hypre module needs
+# to be used to solve the Poisson and diffusion problems
+# efficiently. Further, with Neumann boundary conditions everywhere
+# for the pressure, the resulting linear system is rank-deficient and
+# needs to be "fixed" to avoid drift problems in HYPRE.
+#
+# \begin{figure}[htbp]
+# \caption{\label{vectors}Norm of the velocity and vectors for the
+# stationary regime. The vertical scale is stretched by a factor of
+# ten.}
+# \begin{center}
+# \includegraphics[width=0.6\hsize]{lake.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: gerris2D lake.gfs
+# Version: 110325
+# Required files: lake.gfv
+# Running time: 2 minutes
+# Generated files: lake.eps
+#
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+    GModule hypre
+    MetricStretch {} { sy = 0.1 }
+    Time { end = 5 dtmax = 0.1 }
+    SourceViscosity 1./400.
+    Refine 6
+    OutputTime { istep = 1 } stderr
+    OutputProjectionStats { istep = 1 } stderr
+    OutputDiffusionStats { istep = 1 } stderr
+    OutputScalarStats { istep = 1 } p { v = P }
+    GModule gfsview
+    OutputView { start = end } lake.eps { format = EPS } lake.gfv
+    OutputSimulation { start = end } end.gfs
+}
+GfsBox {
+    top = Boundary {
+	BcNeumann U 1.
+    }
+    right = Boundary
+    left = Boundary
+    bottom = Boundary {
+	BcDirichlet U 0
+    }
+}

@@ -1,0 +1,52 @@
+#!/bin/sh
+#
+# Uses WAVEWATCH III ad3 script to compile an ".ftn" fortran file
+#
+
+if [ "$#" -gt '3' ] || [ "$#" -lt 1 ]; then
+    echo "usage: gfsad3 file.ftn" 1>&2 ; exit 1
+fi
+
+if test -r $HOME/.wwatch3.env; then
+    main_dir=`awk '{if ($1 == "WWATCH3_DIR") print $2;}' < $HOME/.wwatch3.env`
+    tmp_dir=`awk '{if ($1 == "WWATCH3_TMP") print $2;}' < $HOME/.wwatch3.env`
+else
+    echo "gfsad3: Error: Wavewatch environment file '$HOME/.wwatch3.env' not found"
+    exit 1
+fi
+
+if test -f $main_dir/ftn/$1; then
+    echo "gfsad3: Error: file '$main_dir/ftn/$1' already exists"
+    exit 1
+fi
+
+if cp $1 $main_dir/ftn; then :
+else
+    echo "gfsad3: Error: could not copy $1 in '$main_dir/ftn/'"
+    exit 1
+fi
+
+PATH=$PATH:$main_dir/bin
+basename=`basename $1 .ftn`
+ad3 $basename
+rm -f $main_dir/ftn/$1
+
+if test -f $tmp_dir/w3adc.err; then
+    cat $tmp_dir/w3adc.err > /dev/stderr
+    exit 1
+fi
+
+if test -f $tmp_dir/$basename.l; then
+    if awk -v basename=$basename 'BEGIN{FS=":| "; i = 0;}{
+      if ($1 == basename ".f90") i = 1;
+      if (i == 1)
+        print $0;
+    }END{
+      exit (i == 0);
+    }' < $tmp_dir/$basename.l > $tmp_dir/$basename.l.error; then
+	cat $tmp_dir/$basename.l.error > /dev/stderr
+	exit 1
+    fi
+fi
+
+mv -f $main_dir/obj/$basename.o .

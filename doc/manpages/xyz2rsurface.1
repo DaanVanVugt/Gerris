@@ -1,0 +1,32 @@
+.TH xyz2rsurface 1 "August 9, 2008" "" "User Commands"
+
+.SH NAME
+xyz2rsurface \- converts the x, y and z coordinates on standard input to an R*-tree-indexed database suitable for use with the GfsRefineTerrain object of Gerris.
+
+.SH SYNOPSIS
+.B xyz2rsurface
+.RI [OPTION] BASENAME
+.SH DESCRIPTION
+This manual page documents briefly the
+.B xyz2rsurface
+command.
+
+.SH OPTIONS
+These programs follow the usual GNU command line syntax, with long
+options starting with two dashes (`-').
+A summary of options is included below.
+.TP
+.B \-p N  \-\-pagesize=N
+Sets the pagesize in bytes (default is 4096)
+.TP
+.B \-v, \-\-verbose
+Display progress bar.
+.TP
+.B \-h, \-\-help
+Display the help and exit.
+
+.SH AUTHOR
+xyz2rsurface was written by Stephane Popinet <s.popinet@niwa.co.nz>.
+.PP
+This manual page was written by Ruben Molina <rmolina@udea.edu.co>,
+for the Debian project (but may be used by others).

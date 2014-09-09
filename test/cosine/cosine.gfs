@@ -1,0 +1,217 @@
+# Title: Advection of a cosine bell around the sphere
+#
+# Description:
+#
+# This test case was suggested by Williamson et
+# al. \cite{williamson92} (Problem \#1). A "cosine bell" initial
+# concentration is given by
+# $$
+# h(\lambda,\theta)=(h_0/2)(1+\cos(\pi r/R))
+# $$
+# if $r<R$ and 0 otherwise, with $R=1/3$ and
+# $$
+# r=\arccos[\sin\theta_c\sin\theta+\cos\theta_c\cos\theta\cos(\lambda-\lambda_c)]
+# $$
+# the great circle distance between longitude, latitude
+# $(\lambda,\theta)$ and the center initially taken as
+# $(\lambda_c,\theta_c)=(3\pi/2,0)$.
+#
+# The advection velocity field corresponds to solid-body rotation at an
+# angle $\alpha$ to the polar axis of the spherical coordinate
+# system. It is given by the streamfunction
+# $$
+# \psi=-u_0(\sin\theta\cos\alpha-\cos\lambda\cos\theta\sin\alpha)
+# $$
+#
+# The cosine bell field is rotated once around the sphere and should
+# come back exactly to its original position. The difference between
+# the initial and final fields is a measure of the accuracy of the
+# advection scheme coupled with the spherical coordinate mapping (the
+# "conformal expanded spherical cube" metric in our case).
+#
+# For the "spherical cube" metric, two angles are considered: 45
+# degrees which rotates the cosine bell above four of the eight "poles"
+# of the mapping and 90 degrees which avoids the poles entirely. Mass
+# is conserved to within machine accuracy in either case.
+#
+# The mesh is adapted dynamically according to the gradient of tracer
+# concentration.
+#
+# \begin{figure}[htbp] 
+# \caption{\label{solution45}Tracer field after one rotation around the
+# sphere with $\alpha=45^\circ$ (red). Reference solution
+# (green). Zero level contour line (blue). Equivalent static
+# resolutions (a) $16\times 16\times 6$. (b) $32\times 32\times
+# 6$. (c) $64\times 64\times 6$. (d) $128\times 128\times 6$.}
+# \begin{center}
+# \begin{tabular}{cc}
+# (a) \includegraphics[width=0.45\hsize]{isolines-4-45.eps} &
+# (b) \includegraphics[width=0.45\hsize]{isolines-5-45.eps} \\
+# (c) \includegraphics[width=0.45\hsize]{isolines-6-45.eps} &
+# (d) \includegraphics[width=0.45\hsize]{isolines-7-45.eps}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp] 
+# \caption{\label{solution90}Tracer field after one rotation around the
+# sphere with $\alpha=90^\circ$ (red). Reference solution
+# (green). Zero level contour line (blue). Equivalent static
+# resolutions (a) $16\times 16\times 6$. (b) $32\times 32\times
+# 6$. (c) $64\times 64\times 6$. (d) $128\times 128\times 6$.}
+# \begin{center}
+# \begin{tabular}{cc}
+# (a) \includegraphics[width=0.45\hsize]{isolines-4-90.eps} &
+# (b) \includegraphics[width=0.45\hsize]{isolines-5-90.eps} \\
+# (c) \includegraphics[width=0.45\hsize]{isolines-6-90.eps} &
+# (d) \includegraphics[width=0.45\hsize]{isolines-7-90.eps}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp] 
+# \caption{\label{error}Relative error norms (as defined in
+# \cite{williamson92}) as functions of spatial resolution. The results
+# of Rossmanith \cite{rossmanith2006} using a gnomonic spherical cube
+# metric and a different 2nd-order advection scheme are also
+# reproduced for comparison. (a) $\alpha=45^\circ$. (b)
+# $\alpha=90^\circ$.}
+# \begin{center}
+# \begin{tabular}{c}
+# (a) \includegraphics[width=0.7\hsize]{order-45.eps} \\
+# (b) \includegraphics[width=0.7\hsize]{order-90.eps}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp] 
+# \caption{\label{error-t}Maximum relative errors as functions of
+# time. (a) $\alpha=45^\circ$. (b) $\alpha=90^\circ$.}
+# \begin{center}
+# \begin{tabular}{c}
+# (a) \includegraphics[width=0.7\hsize]{error-45.eps} \\
+# (b) \includegraphics[width=0.7\hsize]{error-90.eps}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh cosine.sh
+# Version: 091029
+# Required files: cosine.sh isolines.gfv reference.gfv zero.gfv error-45.ref error-90.ref rossmanith45 rossmanith90
+# Running time: 6 minutes
+# Generated files: isolines-4-45.eps isolines-5-90.eps isolines-7-45.eps order-90.eps isolines-4-90.eps isolines-6-45.eps isolines-7-90.eps isolines-5-45.eps isolines-6-90.eps order-45.eps error-90.eps error-45.eps
+#
+Define U0 (2.*M_PI)
+
+6 12 GfsAdvection GfsBox GfsGEdge {} {
+  PhysicalParams { L = 2.*M_PI/4. }
+  MetricCubed M LEVEL
+
+  # Use alternative implementation
+  # MetricCubed1 M
+  # MapFunction {
+  #     x = atan2 (X, Z)*180./M_PI
+  #     y = asin (CLAMP(Y,-1.,1.))*180./M_PI
+  # }
+
+  Time { end = 1 }
+  Refine LEVEL
+  VariableTracer T { 
+      gradient = gfs_center_gradient 
+      cfl = 1
+  }
+  Global {
+      #define DTR (M_PI/180.)
+      double lambda1 (double lambda, double theta, double lambdap, double thetap) {
+	  /* eq. (8) */
+	  return atan2 (cos (theta)*sin (lambda - lambdap),
+	                cos (theta)*sin (thetap)*cos (lambda - lambdap) - 
+                        cos (thetap)* sin (theta));
+      }
+      double theta1 (double lambda, double theta, double lambdap, double thetap) {
+	  /* eq. (9) */
+	  return asin (sin (theta)*sin (thetap) + cos (theta)*cos (thetap)*cos (lambda - lambdap));
+      }
+      double bell (double lambda, double theta, double lc, double tc) {
+	  double h0 = 1.;
+	  double R = 1./3.;
+	  double r = acos (sin(tc)*sin(theta) + cos (tc)*cos (theta)*cos (lambda - lc));
+	  return r >= R ? 0. : (h0/2.)*(1. + cos (M_PI*r/R));
+      }
+      double bell_moving (double lambda, double theta, double t) {
+	  double lambda2 = lambda1 (lambda, theta, M_PI, M_PI/2. - ALPHA*DTR);
+	  double theta2 = theta1 (lambda, theta, M_PI, M_PI/2. - ALPHA*DTR);
+	  double lc = 3.*M_PI/2. - U0*t, tc = 0.;
+	  return bell (lambda2, theta2, lc, tc);
+      }      
+  }
+  Init {} { T = bell_moving(x*DTR,y*DTR,0) }
+  VariableStreamFunction Psi -U0*(sin (y*DTR)*cos (DTR*ALPHA) - cos (x*DTR)*cos (y*DTR)*sin (DTR*ALPHA))
+  AdaptGradient { istep = 1 } { cmax = 1e-4 maxlevel = LEVEL } T
+  OutputTime { istep = 10 } stderr
+#  OutputSimulation { istep = 10 } stdout
+  OutputSimulation { start = end } end-LEVEL-ALPHA.gfs
+  OutputErrorNorm { istep = 1 } { awk '{ print LEVEL,$3,$5,$7,$9}' > error-LEVEL-ALPHA } { v = T } {
+      s = bell_moving(x*DTR,y*DTR,t)
+      v = E
+      relative = 1
+  }
+  OutputScalarSum { istep = 1 } t-LEVEL-ALPHA { v = T }
+  OutputScalarSum { istep = 1 } area-LEVEL-ALPHA { v = 1 }
+  EventScript { start = end } {
+      ( cat isolines.gfv
+        echo "Save isolines.gnu { format = Gnuplot }"
+        echo "Clear"
+        cat reference.gfv
+        echo "Save reference.gnu { format = Gnuplot }"
+	echo "Clear"
+        cat zero.gfv
+        echo "Save zero.gnu { format = Gnuplot }"
+      ) | gfsview-batch2D end-LEVEL-ALPHA.gfs
+      cat <<EOF | gnuplot
+        set term postscript eps lw 2 18 color
+        set output 'isolines-LEVEL-ALPHA.eps'
+        set size ratio -1
+        set xlabel 'Longitude'
+        set ylabel 'Latitude'
+        unset key
+        plot [60:120][-30:30]'isolines.gnu' w l, 'reference.gnu' w l, 'zero.gnu' w l
+EOF
+      fixbb isolines-LEVEL-ALPHA.eps
+      rm -f isolines.gnu reference.gnu zero.gnu
+
+      # check mass conservation
+      if awk '
+        BEGIN { min = 1000.; max = -1000.; }{ 
+          if ($5 < min) min = $5; 
+          if ($5 > max) max = $5; 
+        }
+        END {
+          if (max - min != 0.)
+            exit (1);
+        }' < t-LEVEL-ALPHA; then
+	  exit 0
+      else
+	  exit $GFS_STOP
+      fi
+  }
+}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+1 2 right
+2 3 top
+3 4 right
+4 5 top
+5 6 right
+6 1 top
+1 3 top left
+3 5 top left
+5 1 top left
+2 6 bottom right
+4 2 bottom right
+6 4 bottom right

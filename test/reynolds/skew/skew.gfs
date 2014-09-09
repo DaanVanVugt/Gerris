@@ -1,0 +1,67 @@
+# Title: Numerical viscosity for the skew-symmetric scheme
+#
+# Description:
+#
+# Same as the previous test but using the skew-symmetric module.
+#
+# \begin{figure}[htbp]
+# \caption{\label{divmax}Evolution of the maximum divergence.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{divmax.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{divL2}Evolution of the L2 norm of the divergence.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{divL2.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{kinetic}Evolution of the kinetic energy.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{kinetic.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{accuracy}Accuracy of the solution as a function of the level of refinement.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{accuracy.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: Daniel Fuster
+# Command: sh skew.sh skew.gfs 1
+# Version: 110723
+# Required files: skew.sh div5.ref div6.ref div7.ref reynolds.ref
+# Running time: 50 seconds
+# Generated files: divmax.eps divL2.eps kinetic.eps accuracy.eps
+#
+GModule skewsymmetric
+
+1 2 GfsSkewSymmetric GfsBox GfsGEdge {} {
+  Time { end = 2 }
+  Refine LEVEL
+  Init {} {
+      U0 = (- cos (2.*M_PI*x)*sin (2.*M_PI*y))
+      V0 = (sin (2.*M_PI*x)*cos (2.*M_PI*y))
+      U = U0
+      V = V0
+  }
+  ApproxProjectionParams { tolerance = 1e-6 }
+  ProjectionParams { tolerance = 1e-6 }
+  OutputScalarNorm { istep = 1 } divLEVEL { v = Divergence }
+  OutputScalarSum { istep = 1 } kineticLEVEL { v = Velocity2 }
+  OutputErrorNorm { start = end } { awk '{ print $3,$5,$7,$9 }' > errorLEVEL.dat } { 
+      v = Velocity 
+  } { 
+      s = sqrt(U0*U0+V0*V0)
+      v = E 
+      relative = 1 
+  }  
+}
+GfsBox {}
+1 1 right
+1 1 top

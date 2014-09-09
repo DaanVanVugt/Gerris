@@ -1,0 +1,28 @@
+#!/bin/bash
+
+if test -z "`which ffmpeg`"; then
+    echo "ppm2theora: error: could not find 'ffmpeg'" > /dev/stderr
+    exit 1
+fi
+
+command="ffmpeg -f image2pipe -vcodec ppm -i - -vcodec libtheora -vb 2048k -f ogg"
+while test $# -gt 0; do
+    command="$command $1"
+    shift
+done
+
+if test -d "$TMPDIR" ; then
+  log=`mktemp $TMPDIR/ppm2theora.XXXXXX`
+else
+  log=`mktemp /tmp/ppm2theora.XXXXXX`
+fi
+
+if $command - 2> $log; then :
+else
+    cat $log > /dev/stderr
+    rm -f $log
+    exit 1
+fi
+rm -f $log
+
+exit 0

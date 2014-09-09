@@ -1,0 +1,60 @@
+# Title: Gaussian forcing using longitude-latitude coordinates
+#
+# Description:
+#
+# Same test case but using a longitude-latitude metric. The errors are
+# larger near the poles and the convergence rate of the multigrid
+# solver much lower due to the large scale ratio between cells at the
+# poles and at the equator.
+#
+# \begin{figure}[htbp]
+#   \caption{\label{profile}Solution of the Poisson problem as a function of latitude.}
+#   \begin{center}
+#   \begin{tabular}{c}
+#     \includegraphics[width=0.8\hsize]{profile.eps}
+#   \end{tabular}
+#   \end{center}
+# \end{figure}
+#
+# Author: S\'ebastien Delaux
+# Command: sh ../gaussian.sh lonlat.gfs 4e-3
+# Version: 110208
+# Required files: prof.ref
+# Generated files: profile.eps
+#
+2 2 GfsPoisson GfsBox GfsGEdge {} {
+  PhysicalParams { L = M_PI }
+  MetricLonLat M 1.
+  Time { iend = 1 }
+  Refine LEVEL
+
+  ProjectionParams { tolerance = 1e-12 }
+  ApproxProjectionParams { tolerance = 1e-12 }
+
+  Init {} { Div = exp(-2.*5.*5.*(1.-cos((y + 90.)/180.*M_PI))) }
+
+  OutputLocation { start = end } prof.dat profile
+
+  OutputSimulation { start = end } end.gfs
+  OutputProjectionStats { istep = 1 } stderr
+
+  EventScript { start = end } {
+      gnuplot <<EOF
+      set term pos enhanced eps color solid 20 lw 3 
+      set out 'profile.eps'
+
+      set key bottom right
+      set xl "Latitude"
+      set yl "{/Symbol F}"
+      set xr [-90:90]
+
+      plot './prof.dat' u 3:(\$5-0.0078011) every 5 ps 2 t "Gerris",\
+           'prof.ref'u 1:2 w l t "(Boyd and Zhou, 2009)"
+EOF
+  }
+  
+}
+GfsBox {}
+GfsBox {}
+1 2 right
+2 1 right

@@ -1,0 +1,152 @@
+# Title: Spherical bubble rise in a quiescent bath
+#
+# Description:
+#
+# Simulates a bubble rising in a quiescent liquid. The density and viscosity 
+# ratios are given, respectively, by $\frac{\rho_f}{\rho_b}=1000$ and 
+# $\frac{\mu_f}{\mu_b}=100$. The bubble velocity is, in general, a 
+# function of the Archimedes number, defined as: 
+# \begin{equation}
+# 	\mathrm{Ar} := \frac{\rho_f \sqrt{g D^3}}{\mu_f}, 
+# \end{equation}
+# and the bubble shape is a function of both the Archimedes number and the
+# Bond number (also known as the E\"otvos number), defined as:
+# \begin{equation}
+# 	\mathrm{Bo} = \frac{\rho_f g D^2}{\sigma}.
+# \end{equation}
+# We take Ar = 1 and Bo = 5. For these values, the bubble's shape remains 
+# approximately spherical. The terminal velocity can then be determined
+# analytically from the Hadamard-Rybczynski equation:
+# \begin{equation}
+# \frac{U}{U_c} = \frac{\mathrm{Ar}}{18}
+# \left(1- \frac{\rho_b}{\rho_f}\right)
+# \left[ \frac{1+\frac{\mu_f}{\mu_b}}{1+\frac23\frac{\mu_f}{\mu_b}} 
+# \right]
+# \end{equation}
+# The characteristic velocity is $U_c = \sqrt{g D}$ and the characteristic
+# time is $t_c = D/U_c$. 
+# \begin{figure}
+# \includegraphics{vel.eps}
+# \end{figure}
+#
+# Author: Dustin Langewisch
+# Command: bash bubble.sh bubble.gfs
+# Version: 130112
+# Required files: bubble.sh bubble.gfv
+# Running time: 2 min (4 processors)
+# Generated files: vel.eps
+
+## Density Ratio (rho_f / rho_v)
+Define RHOR 1000.0
+##
+## Viscosity Ratio (mu_f / mu_v)
+Define MUR 100.0
+##
+## Archimedes Number
+Define Ar 1.0
+##
+## Bond Number
+Define Bo 5.0
+##
+## Domain half-width (WIDTH*Diameter)
+Define WIDTH 6.0
+##
+## Min/Max Refinement levels 
+Define MINLEVEL 4 
+Define MIDLEVEL (MINLEVEL+2)
+Define MAXLEVEL (MIDLEVEL+2)
+
+Define VAR(T,min,max) (min + CLAMP(T,0,1)*(max-min))
+##
+## density
+Define RHO(T) VAR(T,1.0,1.0/RHOR)
+##
+## viscosity (harmonic mean)
+Define MUHARM(T)  1.0/VAR(T,1.0,MUR)
+
+Define MAXTIME 10.0
+
+2 1 GfsAxi GfsBox GfsGEdge { x = -.25 } {
+
+    Time { end = MAXTIME }
+
+    PhysicalParams { L = WIDTH }
+
+    Refine 6
+
+    ## According to my tests, this case runs significantly faster with
+    ## the hypre module enabled.
+    GModule hypre
+
+    VariableTracerVOFHeight T
+    VariableFiltered  T1 T 1
+    VariableCurvature K T Kmax
+
+    InitFraction  T ( -(x*x)-(y*y)+(.25) )
+
+    PhysicalParams { alpha = 1.0/RHO(T1) }
+
+    Source {} U -1.0
+
+    SourceViscosity MUHARM(T1)/Ar
+
+    SourceTension T 1.0/Bo K
+    
+    AdaptGradient  { istep = 1 } { 
+	maxlevel = MAXLEVEL
+	minlevel = MINLEVEL 
+	cmax = 1e-2
+    } T1
+
+    AdaptVorticity { istep = 1 } { 
+	maxlevel = MIDLEVEL
+	minlevel = MINLEVEL
+	cmax = 1e-2 
+	cfactor = 1
+    }
+
+    EventBalance { istep = 10 } 0.1
+
+    OutputProjectionStats { istep = 10 } stderr
+    OutputDiffusionStats  { istep = 10 } stderr
+    OutputBalance         { istep = 10 } stderr
+    OutputTime            { istep = 10 } stderr
+
+    ## compute bubble volume (needed to compute centroid)
+    SpatialSum { step = .1 } bubble_volume T
+
+    ## write bubble position and velocity
+    OutputScalarSum { step = .1 } {
+	awk '{
+	  if (NR == 1) {
+	    ## analytical solution (terminal velocity)
+	    uex  = (1.0+MUR)/(1.0+2.0*MUR/3.0);
+	    uex *= (Ar/18.0)*(1.0-1.0/RHOR)
+	    print $3, $5, 0.0, uex;
+	  }
+          else { 
+	    print (t+$3)/2., $5, ($5-x)/($3-t), uex;
+	  }
+          t = $3; x = $5;
+          fflush(stdout)
+        }' > xv
+    } { v = x*T/bubble_volume }
+
+    OutputSimulation  { istep = 10  } stdout
+
+    GfsEventScript { start = end } {
+	gnuplot <<- EOF
+			set key bottom right
+			set xlabel "time"
+			set ylabel "velocity"
+			set term postscript eps lw 3 solid 20 colour
+			set output "vel.eps"
+			plot 'xv' u 1:3 title "computed", \
+			       '' u 1:4 w l title "Hadamard-Rybczynski"
+		EOF
+    }
+}
+
+GfsBox { bottom = Boundary }
+GfsBox { bottom = Boundary }
+1 2 right

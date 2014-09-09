@@ -1,0 +1,93 @@
+# Title: Axisymmetric spherical droplet in equilibrium
+#
+# Description:
+#
+# The same test case but using the axisymmetric solver. The results
+# are comparable.
+#
+# \begin{figure}[htbp]
+# \caption{\label{laplace}Evolution of the amplitude of the capillary currents
+# $\max(|{\bf u}|)(D/\sigma)^{1/2}$ as a function of
+# non-dimensional time $\tau=t\mu/D^2$ for the range of Laplace
+# numbers indicated in the legend.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{laplace.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{curvature}Evolution of the standard deviation of the
+# value of the curvature along the interface as a function of
+# non-dimensional time $\tau=t\mu/D^2$ for the range of Laplace
+# numbers indicated in the legend.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{curvature.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{convergence}Convergence of the error on the equilibrium shape of the
+# droplet with resolution. The diameter is given in number of grid
+# points.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{convergence.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{kconvergence}Convergence of the relative error on the
+# equilibrium curvature value with resolution. The diameter is given
+# in number of grid points.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{kconvergence.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh ../spurious.sh axi.gfs 5e-8
+# Version: 1.3.1
+# Required files: convergence.ref kconvergence.ref
+# Generated files: laplace.eps curvature.eps convergence.eps kconvergence.eps
+#
+
+Define CIRCLE (ellipse (-0.5,0.,0.4,0.4))
+Define MU sqrt(0.8/LAPLACE)
+
+1 0 GfsAxi GfsBox GfsGEdge {} {
+  Time { end = TMAX }
+  Refine LEVEL
+  RefineSurface {return 10;} CIRCLE
+
+  ApproxProjectionParams { tolerance = 1e-6 }
+  ProjectionParams { tolerance = 1e-6 }
+  AdvectionParams { scheme = none }
+
+  VariableTracerVOFHeight T
+  VariableCurvature K T
+  SourceTension T 1 K
+  SourceViscosity MU
+
+  InitFraction T CIRCLE
+  Init {} { Tref = T }
+
+  AdaptGradient { istep = 1 } { cmax = 1e-6 maxlevel = LEVEL } T
+  EventStop { istep = 10 } T DT
+
+  OutputSimulation { start = end } stdout { depth = LEVEL }
+  OutputScalarNorm { istep = 1 } {
+    awk '{ print MU*$3/(0.8*0.8), $9*sqrt(0.8); fflush (stdout); }' > La-LAPLACE-LEVEL
+  } { v = Velocity }
+  OutputScalarNorm { istep = 1 } {
+    awk '{ print MU*$3/(0.8*0.8), $5, $7, $9; fflush (stdout); }' > E-LAPLACE-LEVEL
+  } { v = (Tref - T) }
+  OutputScalarStats { istep = 1 } {
+    awk '{ print MU*$3/(0.8*0.8), $5, $7, $9, $11; fflush (stdout); }' > K-LAPLACE-LEVEL
+  } { v = (K - 2.50771) }
+  OutputScalarNorm { istep = 1 } {
+    awk '{ print MU*$3/(0.8*0.8), $5, $7, $9; fflush (stdout); }' > EK-LAPLACE-LEVEL
+  } { v = (T > 0 && T < 1 ? (K - 5.)/2. : 0) }
+}
+GfsBox {
+  bottom = Boundary
+  left = Boundary
+}

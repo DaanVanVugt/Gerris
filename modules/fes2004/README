@@ -1,0 +1,217 @@
+################################################################
+#
+#   FES2004_distribution_soft-1.0.2
+#
+# -----------------------------------------------------------------------------------------------------------------------
+# THE SOFTWARE IS DISTRIBUTED FOR THE SCIENTIC COMMUNITY WITHOUT ANY GARANTEE
+# -----------------------------------------------------------------------------------------------------------------------
+#
+# Author : T. LETELLIER Legos Toulouse FRANCE
+#
+################################################################
+
+
+
+
+  REQUIREMENTS :
+================
+
+1---
+
+You need GSL (the Gnu Scientific Library) to be installed on your computer
+see : http://www.gnu.org/software/gsl/
+
+By default GSL is installed by root in the classical /usr/bin  /usr/lib  /usr/include 
+some times in /usr/local/bin  /usr/local/lib  /usr/local/include 
+
+If the installation was made made be a default user or if the configure script not found the GSL files
+you need to configure the environement :
+in bash :
+export PATH=$PATH:/home/user/softs/gsl/bin
+export CFLAGS="$CFLAGS -I/home/user/softs/gsl/include"
+export LDFLAGS="$LDLAGS -I/home/user/softs/gsl/lib"
+
+2---
+
+You need NETCDF (network Common Data Form) to be installed on your computer
+see : http://www.unidata.ucar.edu/software/netcdf/
+
+By default NETCDF is installed by root in the classical /usr/bin  /usr/lib  /usr/include 
+some times in /usr/local/bin  /usr/local/lib  /usr/local/include 
+
+If the installation was made made be a default user or if the configure script not found the NETCDF files
+you need to configure the environement :
+in bash :
+export PATH=$PATH:/home/user/softs/netcdf/bin
+export CFLAGS="$CFLAGS -I/home/user/softs/netcdf/include"
+export LDFLAGS="$LDLAGS -I/home/user/softs/netcdf/lib"
+
+
+
+
+
+  COMPILATION :
+================
+
+You just have to execute the 3 commands :
+	./configure
+	make
+	make install
+	
+in the major compilation case you do not have to install this program in the system path
+(and also if oyu are not root you do not have the right)
+
+Then use the option --prefix=/home/user/bin/... (path that pointing to an existing directory)
+to the configure script
+example :
+	mkdir /home/user/bin/FES2004_EXEC_DIR
+	./configure --prefix=/home/user/bin/FES2004_EXEC_DIR
+
+
+
+
+  INSTALLATION :
+================
+
+The "make install" script will install 3 files
+the executable FES2004.exe in bin directory
+the header file fes2004.h in include directory
+the lib file libfes.a in lib directory
+
+
+
+
+  USE FES2004.exe :
+===================
+
+Usage : FES2004.exe [parameters] [option] file ...
+
+ ----PARAMETERS---- :
+  ------------------
+  -t [argument]    Process type           : extraction - prediction   Note : this option can be use two times ...
+  -s [argument]    Data set for process   :    tide    -  loading     Note : this option can be use two times ...
+  -A [FILE]        Necessary (with -s tide) path and filename of the --TIDE-- FES netcdf data file
+  -B [FILE]        Necessary (with -s load) path and filename of the --LOAD-- FES netcdf data file
+  -----VARIABLE PARAMETER---- :
+  ----------------------------
+  -r [value]       Necessary for prediction :
+                   This is the time refence of the input file.
+                   Use : 0 --> 01Jan1950  0H00
+                         1 --> 01Jan1958  0H00
+                         2 --> 01Jan1985  0H00
+                         3 --> 01Jan2000  0H00
+                         DEFAULT is 0
+  ----OPTION---- :
+  ---------------
+  -o [file]        Optionnal give a specific root output file name
+
+  ----EXAMPLES---- :
+  ----------------
+
+    1- FES2004.exe -t extraction -s loading -B load.nc inputFILE             --> extraction of the loading data in out_file.loading.extract
+
+    2- FES2004.exe -t extraction -t prediction -s tide -A tide.nc inputFILE  --> extraction of the tide data in out_file.tide.extract
+                                                                                 and prediction of the tide data in out_file.tide.pred
+
+    3- FES2004.exe -t prediction -s tide -s loading -A tide.nc -B load.nc inputFILE     --> prediction of both the tide and loading data
+                                                                                            in out_file.tide.pred and out_file.loading.extract
+
+    4- FES2004.exe -t prediction -A tide.nc -s tide -o my_output inputFILE   --> prediction of the tide data in my_output.tide.pred
+
+    5- FES2004.exe -t prediction -s tide -A tide.nc -d /MYPATH/  inputFILE   --> prediction of the tide data (FES2004.nc) found in /MYPATH/
+
+
+The inputFile MUST HAVE THIS FORMAT
+
+Latitude Longitude Time
+Latitude Longitude Time
+Latitude Longitude Time
+Latitude Longitude Time
+Latitude Longitude Time
+Latitude Longitude Time
+ .
+ .
+ .
+Where latitude longitude and time are double
+With Latitude and Longitude in degrees (-180 +180) or (0 360)
+and time in hours since the time reference ...
+
+For the extraction process you do not have to indicate a valid time
+because it is not use
+BUT IT MUST PRESENT
+
+
+
+
+
+  USE libfes.a :
+===================
+
+The libfes can be used in C and C++ language
+
+You just have to include the file fes2004.h (that prototype the prediction and extraction functions)
+and use the libfes2004.a the gsl gslcblas and netcdf libraries during the linking
+
+Example
+
+---
+C sources
+
+#include "fes2004.h"
+
+int main()
+{
+char netcdf_filename[256];
+int nb_position=600;
+double *lat,double *lon,double **amplitude,double **phase;
+int nb_CPU;
+
+//allocation
+
+rstatus=fes2004_extraction (netcdf_filename,nb_position,lat,lon,amplitude,phase,nb_CPU);
+
+}
+
+---
+compilation
+
+gcc -g -IFES_Directory/include -lfes -lnetcdf -lgsl -lgslcblas -o My_own_extract.exe 
+
+
+For the Fortran We think that the liffes.a can also be use
+all the parameters used for the CALL are classical and correspond to Fortran tabular
+But yet it was never been tested ....
+
+
+---
+experts
+
+You can use libfes on a defined number of processors
+You need to uncoment the 
+#define MULTI
+in the src/fes2004_kernel.c file and then recompile the lib
+with 
+./configure --prefix= ...
+make 
+make install
+
+You can now use the nb_cpu parameters of the extraction and prediction functions
+ ...
+ It's easy	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

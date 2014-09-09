@@ -1,0 +1,122 @@
+# Title: Circular dam break on a sphere
+#
+# Description:
+#
+# An initial circular cylinder collapses and creates shock and
+# rarefaction waves. The initial condition are radially-symmetric and
+# should remain so. The problem is discretised using
+# longitude-latitude spherical coordinates. Deviations from radial
+# symmetry are a measure of the accuracy of treatment of geometric
+# source terms.
+#
+# This test case was proposed by \cite{rossmanith2004}, Figures 5 and 6.
+#
+# \begin{figure}[htbp]
+# \caption{\label{height}Solution to the shallow-water equations computed on a
+# longitude-latitude grid in the domain
+# $[-75^\circ,75^\circ]\times[-75^\circ,75^\circ]$ with $256\times
+# 256$ points. The solution is shown at times (a) $t=0.3$, (b)
+# $t=0.6$, and (c) $t=0.9$. The contours do not appear circular
+# because the solution has been projected down to a plane.}
+# \begin{center}
+# \begin{tabular}{cc}
+# (a) \includegraphics[width=0.45\hsize]{isolines-0.3.eps} &
+# (b) \includegraphics[width=0.45\hsize]{isolines-0.6.eps} \\
+# \multicolumn{2}{c}{(c) \includegraphics[width=0.45\hsize]{isolines-0.9.eps}}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp] 
+# \caption{Scatter plot of the (radial) solution shown in Figure
+# \ref{height}. The green line is the average solution. The solution
+# is shown at times (a) $t=0.3$, (b) $t=0.6$, and (c) $t=0.9$.}
+# \begin{center}
+# \begin{tabular}{c}
+# (a) \includegraphics[width=0.8\hsize]{p-0.3.eps} \\
+# (b) \includegraphics[width=0.8\hsize]{p-0.6.eps} \\
+# (c) \includegraphics[width=0.8\hsize]{p-0.9.eps}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: gerris2D -m lonlat.gfs
+# Version: 090924
+# Required files: isolines.gfv
+# Running time: 5 minutes
+# Generated files: isolines-0.3.eps isolines-0.6.eps isolines-0.9.eps p-0.3.eps p-0.6.eps p-0.9.eps
+#
+Define LENGTH (150./180.*M_PI)
+
+1 0 GfsRiver GfsBox GfsGEdge {} {
+    PhysicalParams { L = LENGTH }
+    MetricLonLat M 1.
+    Refine 8
+    InitFraction P (0.2 - acos(cos(x*M_PI/180.)*cos(y*M_PI/180.)))
+    Init {} { P = 0.2 + 1.8*P/LENGTH }
+    Time { end = 0.9 }
+    OutputTime { istep = 10 } stderr
+    GModule gfsview
+    OutputView { start = 0.3 step = 0.3 } isolines-%g.eps { 
+	format = EPS line_width = 0.5 
+    } isolines.gfv
+    OutputSimulation { step = 0.3 } sim-%g.txt { variables = U,V,P format = text }
+    OutputScalarSum { istep = 1 } sp { v = P }
+#    OutputSimulation { istep = 10 } stdout
+    EventScript { start = end } {
+	status=0
+	for i in 0.3 0.6 0.9; do
+	    if awk 'BEGIN { n1 = 0; pi = 3.14159265359 }{
+              if ($1 != "#") {
+                c = cos($1*pi/180.)*cos($2*pi/180.);
+                d = atan2(sqrt(1. - c*c),c)*180./pi
+                i = int(d*2.)
+                x[i] += d
+                y[i] += $6
+                n[i]++
+                x1[n1] = d;
+                y1[n1++] = $6;
+              }
+            }END {
+              for (i = 0; i <= 180; i++)
+                if (n[i] > 0)
+                  print x[i]/n[i], y[i]/n[i], n[i];
+              sum = 0.;
+              for (i = 0; i < n1; i++) {
+                j = int(x1[i]*2.)
+                d = y1[i] - y[j]/n[j];
+                sum += d*d;
+              }
+              scatter = sqrt(sum/n1);
+              if (scatter > 0.013) {
+                print scatter > "/dev/stderr";
+                exit (1);
+              }
+            }' < sim-$i.txt > prof-$i.txt ; then :
+	    else
+		status=$GFS_STOP;
+	    fi
+
+	    cat <<EOF | gnuplot
+rdist(x,y)=acos(cos(x*pi/180.)*cos(y*pi/180.))*180./pi
+cdist(x,y)=sqrt(x*x+y*y)
+set xlabel 'Angular distance (degree)'
+set ylabel 'Surface height'
+set xtics 0,22.5,90
+set ytics 0,0.25,0.75
+set term postscript eps color lw 2 solid 20
+set output 'p-$i.eps'
+plot [0:90][0:0.75]'sim-$i.txt' u (rdist(\$1,\$2)):6 ps 0.25 pt 6 t '', 'prof-$i.txt' w l lw 2 t ''
+EOF
+
+	done
+	exit $status
+    }
+}
+GfsBox {
+    right = Boundary { BcNeumann U 0 }
+    left = Boundary { BcNeumann U 0 }
+    top = Boundary { BcNeumann V 0 }
+    bottom = Boundary { BcNeumann V 0 }
+}

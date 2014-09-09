@@ -1,0 +1,20 @@
+2 1 GfsSimulation GfsBox GfsGEdge { 
+    x = -0.2
+    y = -0.38
+} {
+#    Refine (x > 0 && y > 0 ? 4 : 3)
+    Refine 4
+    VariableTracerVOFHeight T
+    VariableCurvature K T
+    InitFraction T (ellipse (0, 0, 0.2, 0.3))
+    AdaptFunction { istep = 1 } { 
+	cmax = 0
+	minlevel = (x > 0.051 && y > -0.0033 && x < 0.1722 && y < 0.114 ? 4 : 0)
+	maxlevel = 4 
+    } (T > 0 && T < 1)
+    Time { end = 0 }
+    OutputSimulation { start = end } stdout
+}
+GfsBox { pid = 0 }
+GfsBox { pid = 1 }
+1 2 top

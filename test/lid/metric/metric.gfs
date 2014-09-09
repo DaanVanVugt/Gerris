@@ -1,0 +1,145 @@
+# Title: Lid-driven cavity with a non-uniform metric
+#
+# Description:
+#
+# Same test case but using a non-uniformly-stretched mesh in both
+# directions.
+#
+# The stationary solution obtained is illustrated on Figure
+# \ref{velocity} together with the non-uniform mesh.
+#
+# \begin{figure}[htbp]
+# \caption{\label{velocity}Isolines of the norm of the velocity for
+# the stationary regime and non-uniform mesh.}
+# \begin{center}
+# \includegraphics[width=\hsize]{velocity.eps}
+# \end{center}
+# \end{figure}
+#
+# Velocity profiles are generated automatically and compared to the
+# benchmark results of Ghia et al. \cite{ghia82} on
+# Figures \ref{xprof} and \ref{yprof}.
+#
+# \begin{figure}[htbp]
+# \caption{\label{xprof}Vertical profile of the $x$-component of the velocity on
+# the centerline of the box.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{xprof.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{yprof}Horizontal profile of the $y$-component of the velocity on
+# the centerline of the box.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{yprof.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh ../lid.sh metric.gfs
+# Version: 111025
+# Required files: isolines.gfv xprofile yprofile xprof.ghia yprof.ghia
+# Running time: 15 minutes
+# Generated files: xprof.eps yprof.eps velocity.eps
+#
+# The simulation domain has 1 GfsBox
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+
+  # Stop the simulation at t = 300 if convergence has not been reached before
+  Time { end = 300 }
+
+  # Use an initial refinement of 6 levels (i.e. 2^6=64x64)
+  Refine 6
+
+  # Use a non-uniformly-stretched metric in the x- and y-directions
+  Metric M {
+      x = tanh(4.*rx)/tanh(4./2.)/2.
+      y = tanh(4.*ry)/tanh(4./2.)/2.
+  }
+
+  # Use hypre to accelerate convergence. It also works with the native
+  # solver but one needs to be careful about the tolerance for the
+  # projection
+  GModule hypre
+  ProjectionParams { tolerance = 1e-4 }
+  ApproxProjectionParams { tolerance = 1e-4 }
+
+  # Set a viscosity source term on the velocity vector with x-component U
+  # The Reynolds number is Re = L*U/Nu = 1*1/1e-3 = 1000
+  SourceDiffusion U 1e-3
+  SourceDiffusion V 1e-3
+
+  # Stops the simulation if the maximum of the absolute value of the
+  # difference between the current U field and the U field 10 timesteps
+  # before is smaller than 1e-4.
+  #
+  # Stores this difference in the DU field (this can be used for
+  # monitoring the convergence of the simulation).
+  EventStop { istep = 10 } U 1e-4 DU
+
+  OutputScalarNorm { istep = 10 } du { v = DU }
+
+  # Use gfsview module to generate a Gnuplot file with the mesh and isolines
+  # We use gnuplot because gfsview cannot (yet) take the metric into
+  # account when displaying results
+  GModule gfsview
+  OutputView { start = end } isolines.gnu { format = Gnuplot } isolines.gfv
+
+  # At the end of the simulation, computes the values of the variables
+  # at the locations defined in files xprofile, yprofile and stores the
+  # results in files xprof, yprof
+  OutputLocation { start = end } xprof xprofile
+  OutputLocation { start = end } yprof yprofile
+
+  OutputSimulation { start = end } end.gfs
+
+  # At the end of the simulation calls the script generating the EPS
+  # files using gnuplot and files: xprof, yprof, xprof.ghia, yprof.ghia
+  EventScript { start = end } {
+    gnuplot <<EOF
+    set term postscript eps
+    set output 'velocity.eps'
+    set size ratio -1
+    unset border
+    unset key
+    unset xtics
+    unset ytics
+    plot 'isolines.gnu' w l
+EOF
+    gnuplot <<EOF
+    set term postscript eps lw 3 solid 20
+    set output 'xprof.eps'
+    set xlabel 'Y'
+    set ylabel 'U'
+    plot [-0.5:0.5]'xprof.ghia' u 1:2 title "Ghia et al." w p ps 2 pt 9, 'xprof' u 3:7 w l title "Gerris"
+    set output 'yprof.eps'
+    set xlabel 'X'
+    set ylabel 'V'
+    plot [-0.5:0.5]'yprof.ghia' u 1:2 title "Ghia et al." w p ps 2 pt 9, 'yprof' u 2:8 w l title "Gerris"
+EOF
+  }
+}
+GfsBox {
+
+  # Dirichlet boundary conditions for both components of the velocity on all sides:
+  # - non-slip (U = V = 0) on right, left and bottom boundaries
+  # - tangential velocity equal to 1 (U = 1) on top boundary
+
+  top = Boundary {
+    BcDirichlet U 1
+    BcDirichlet V 0
+  }
+  bottom = Boundary {
+    BcDirichlet U 0
+    BcDirichlet V 0
+  }
+  right = Boundary {
+    BcDirichlet U 0
+    BcDirichlet V 0
+  }
+  left = Boundary {
+    BcDirichlet U 0
+    BcDirichlet V 0
+  }
+}

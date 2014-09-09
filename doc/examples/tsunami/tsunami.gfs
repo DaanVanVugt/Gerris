@@ -1,0 +1,382 @@
+# Title: The 2004 Indian Ocean tsunami
+#
+# Description:
+#
+# The 2004 Indian Ocean tsunami was caused by a large-scale fault
+# rupture ($> 1000$ km) at the Indian--Australian and
+# Eurasian--Andaman plate boundaries. This example uses the fault
+# model of Grilli et al. \cite{grilli2007} as initial conditions to a
+# Saint-Venant solution of the subsequent tsunami. The evolution of
+# the wave elevation is illustrated in the animation of Figure
+# \ref{h}.a. Adaptivity is used to track the various wave fronts
+# (Figure and animation \ref{h}.b) and the terrain is reconstructed
+# dynamically based on the
+# \htmladdnormallinkfoot{ETOPO1}{http://www.ngdc.noaa.gov/mgg/global/global.html}
+# dataset.
+#
+# \begin{figure}[htbp]
+# \caption{\label{h}(a) Animation of wave elevation. Dark red is
+# larger than 2 m, dark red smaller than -2 m. (b) Animation of
+# adaptive level of refinement. Dark red is 0.8 nautical miles, dark
+# blue is 101 nautical miles.}
+# \begin{center}
+# \begin{tabular}{cc}
+# \htmladdnormallinkfoot{\includegraphics[width=0.5\hsize]{h.eps}}{h.mpg} &
+# \htmladdnormallinkfoot{\includegraphics[width=0.5\hsize]{level.eps}}{level.mpg} \\
+# (a) & (b)
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# The maximum wave elevation reached over 10 hours after fault rupture
+# is illustrated on Figure \ref{elevation}.
+#
+# \begin{figure}[htbp]
+# \caption{\label{elevation}Maximum wave elevation reached over 10
+# hours, 1 metre interval contours. (a) Bay of Bengal, dark blue zero,
+# dark red $>5$ m. (b) Detail near Northern Sumatra and Thailand, dark
+# blue zero, dark red $> 8$ m.}
+# \begin{center}
+# \begin{tabular}{cc}
+# \includegraphics[width=0.5\hsize]{hmax.eps} &
+# \includegraphics[width=0.5\hsize]{hmax-detail.eps} \\
+# (a) & (b)
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# Finally Figure \ref{data} gives a comparison of the observed (using
+# tide gauges) and modelled timeseries at specific locations in the
+# Indian Ocean. Figure \ref{jason} gives a comparison of the modelled wave
+# profile with the profile observed by the Jason-1 satellite altimeter.
+#
+# \begin{figure}[htbp]
+# \caption{\label{data}Observed and modelled time-series of wave
+# elevation (metres) at different tide gauge locations. Horizontal
+# axis is time in hours after the initial fault rupture.}
+# \begin{center}
+# \begin{tabular}{cc}
+# \includegraphics[width=0.5\hsize]{hani.eps} &
+# \includegraphics[width=0.5\hsize]{dieg.eps} \\
+# Hannimaadhoo, Maldives & Diego Garcia \\
+# \includegraphics[width=0.5\hsize]{male.eps} &
+# \includegraphics[width=0.5\hsize]{colo.eps} \\
+# Male, Maldives & Columbo, Sri Lanka \\
+# \includegraphics[width=0.5\hsize]{gana.eps} \\
+# Gan, Maldives
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{jason}Observed (Jason-1 satellite altimeter) and modelled wave profiles.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{jason.eps}
+# \end{center}
+# \end{figure}
+#
+# More details on this simulation and the method used is given in
+# \cite{popinet2011}.
+#
+# Author: St\'ephane Popinet
+# Command: gerris2D -m tsunami.gfs | gfsview2D tsunami.gfv
+# Required files: output.gfs tsunami.gfv h.gfv level.gfv hmax.gfv hmax-detail.gfv hanires.txt diegres.txt maleres.txt colores.txt ganares.txt jason.xy jasonres.txt
+# Version: 110107
+# Running time: 
+# Generated files: h.eps level.eps h.mpg level.mpg hmax.eps hmax-detail.eps hani.eps dieg.eps male.eps colo.eps gana.eps jason.eps
+
+# the radius of the Earth (in meters) 
+Define RADIUS 6371220.
+# the size of the domain
+Define LENGTH 6000e3
+# the domain is centered on 94E, 8N
+Define LONGITUDE 94.
+Define LATITUDE 8.
+# anywhere with a fluid depth < 1 cm is considered dry
+Define DRY 0.01
+# 12 levels of refinement max i.e. a maximum resolution of 6000e3/2^12 = 1464 m
+Define MAXLEVEL 12
+# keep a coarse band, 0.04 wide, on all boundaries of the domain
+# these act as "sponges" before the waves exit the domain
+Define LEVEL (fabs (rx) < 0.46 && fabs (ry) < 0.46 ? MAXLEVEL : 5)
+
+1 0 GfsRiver GfsBox GfsGEdge {} {
+    PhysicalParams { 
+	# length of the domain (m)
+	L = LENGTH 
+        # gravity is 9.81 m/s^2
+	g = 9.81
+	# from now on, units have been chosen to be metres and seconds
+    }
+    # use the longitude/latitude metric. x and y coordinates are now
+    # longitude and latitude in degrees
+    MetricLonLat M RADIUS
+    # shift the origin to where we want it
+    MapTransform { tx = LONGITUDE ty = LATITUDE }
+    # 10 hours
+    Time { end = 36000 }
+    # use the terrain module for topography
+    GModule terrain
+    # use the okada module for initial deformations
+    GModule okada
+    Refine 5
+    # maintain Zb as the terrain elevation defined by the samples in
+    # ETOPO1
+    # the 'etopo1' database needs to have been created beforehand and
+    # be accessible within GFS_TERRAIN_PATH, see the 'terrain' module
+    # documentation above
+    VariableTerrain Zb {
+        basename = etopo1
+    } {
+	# preserve lake-at-rest balance (but not volume) when
+	# reconstructing bathymetry
+	reconstruct = 1 
+    }
+
+    # the default minmod limiter is too dissipative for tsunamis
+    AdvectionParams { gradient = gfs_center_sweby_gradient }
+
+    # deformation from Grilli et al, 2007, Table 1
+    # 5 segments triggered at different times
+
+    # Segment 1
+    Init {} { D = 0 }
+    InitOkada D {
+	x = 94.57 y = 3.83
+	depth = 11.4857e3
+	strike = 323 dip = 12 rake = 90
+	length = 220e3 width = 130e3
+	U = 18
+    }
+    # Initial water level is at z = D
+    Init { start = 0 } { P = MAX (0., D - Zb) }
+
+    # Segment 2
+    EventList { start = 212 step = 6 end = 272 } {
+	Init {} { D = 0 }
+	InitOkada D {
+	    x = 93.90 y = 5.22
+	    depth = 11.4857e3
+	    strike = 348 dip = 12 rake = 90
+	    length = 150e3 width = 130e3
+	    U = 23
+	}
+    }
+    # make sure the deformation is well resolved
+    AdaptGradient { start = 212 istep = 1 end = 272 } {
+	cmax = 0.05 cfactor = 2
+	minlevel = 5 maxlevel = LEVEL 
+    } D
+    # add it to the current elevation field (only if wet)
+    Init { start = 272 } { P = (P < DRY ? P : MAX (0., P + D)) }
+
+    # Segment 3
+    EventList { start = 528 step = 6 end = 588 } {
+	Init {} { D = 0 }
+	InitOkada D {
+	    x = 93.21 y = 7.41
+	    depth = 12.525e3
+	    strike = 338 dip = 12 rake = 90
+	    length = 390e3 width = 120e3
+	    U = 12
+	}
+    }
+    # make sure the deformation is well resolved
+    AdaptGradient { start = 528 istep = 1 end = 588 } {
+	cmax = 0.05 cfactor = 2
+	minlevel = 5 maxlevel = LEVEL 
+    } D
+    # add it to the current elevation field (only if wet)
+    Init { start = 588 } { P = (P < DRY ? P : MAX (0., P + D)) }
+
+    # Segment 4
+    EventList { start = 853 step = 6 end = 913 } {
+	Init {} { D = 0 }
+	InitOkada D {
+	    x = 92.60 y = 9.70
+	    depth = 15.12419e3
+	    strike = 356 dip = 12 rake = 90
+	    length = 150e3 width = 95e3
+	    U = 12
+	}
+    }
+    # make sure the deformation is well resolved
+    AdaptGradient { start = 853 istep = 1 end = 913 } {
+	cmax = 0.05 cfactor = 2
+	minlevel = 5 maxlevel = LEVEL 
+    } D	
+    # add it to the current elevation field (only if wet)
+    Init { start = 913 } { P = (P < DRY ? P : MAX (0., P + D)) }
+
+    # Segment 5
+    EventList { start = 1213 step = 6 end = 1273 } {
+	Init {} { D = 0 }
+	InitOkada D {
+	    x = 92.87 y = 11.70
+	    depth = 15.12419e3
+	    strike = 10 dip = 12 rake = 90
+	    length = 350e3 width = 95e3
+	    U = 12
+	}
+    }
+    # make sure the deformation is well resolved
+    AdaptGradient { start = 1213 istep = 1 end = 1273 } {
+	cmax = 0.05 cfactor = 2
+	minlevel = 5 maxlevel = LEVEL 
+    } D	
+    # add it to the current elevation field (only if wet)
+    Init { start = 1273 } { P = (P < DRY ? P : MAX (0., P + D)) }
+
+    # we don't want the arrival time to be interpolated from coarse
+    # to fine, so we make it a "boolean" variable
+    VariableBoolean Atime
+    Init {} {
+	P = MAX (0., D - Zb)
+	Pmax = 0.
+	Atime = -1.
+    }
+
+    Init { istep = 1 } {
+	# elevation of the wet surface
+	Hwet = (P > DRY ? H : NODATA)
+	# maximum amplitude
+	Pmax = (P > DRY && H > Pmax ? H : Pmax)
+	# arrival time for an amplitude of +- 5 cm
+	Atime = (Atime >= 0. ? Atime : P > DRY && fabs (H) > 5e-2 ? t : -1.)
+	# implicit scheme for quadratic bottom friction with coefficient 1e-3
+        U = P > DRY ? U/(1. + dt*Velocity*1e-3/P) : 0
+        V = P > DRY ? V/(1. + dt*Velocity*1e-3/P) : 0
+    }
+
+    # adapt on gradient of wet surface elevation
+    # with a tolerance of 5 cm
+    AdaptGradient { istep = 1 } {
+	cmax = 0.05 cfactor = 2
+	minlevel = 5 maxlevel = LEVEL 
+    } (P < DRY ? 0. : P + Zb)
+
+    # also keep enough resolution to resolve the maximum elevation
+    # field with a 5 cm discretisation error max
+    AdaptError { istep = 1 } {
+    	cmax = 0.05
+    	minlevel = 5 maxlevel = LEVEL 
+    } Pmax
+    
+    Global {
+	#define RESOLUTION (LENGTH/pow (2, MAXLEVEL))
+	#define close_enough(x,y) (distance(x,y,0.) < RESOLUTION)
+    }
+    # include a list of locations for which to output timeseries
+    Include output.gfs
+
+    # Jason profiles
+    OutputLocation { start = 6900 } jason.txt jason.xy
+
+    OutputTime { istep = 1 } stderr
+    OutputBalance { istep = 1 } stderr
+    OutputTiming { istep = 100 } stderr
+
+    # save a snapshot every 100 iterations
+    EventScript { istep = 100 } { rm -f snapshot-*.gfs }
+    OutputSimulation { istep = 100 } snapshot-%ld.gfs
+
+    # output solution on standard output every 20 timesteps
+    # for on-the-fly visualisation with GfsView
+    OutputSimulation { istep = 20 } stdout
+
+    # ouput solution every 900 seconds (15 minutes)
+    OutputSimulation { step = 900 } sim-%g.gfs
+    EventScript { step = 900} { gzip -f sim-*.gfs }
+
+    OutputScalarStats { istep = 1 } p { v = P }
+    OutputScalarNorm { istep = 1 } u { v = Velocity }
+    OutputScalarNorm { istep = 1 } U { v = U }
+    OutputScalarNorm { istep = 1 } V { v = V }
+    OutputScalarNorm { istep = 1 } hwet { v = Hwet }
+
+    # animation of the wave elevation
+    GModule gfsview
+    OutputView { step = 60 } { ppm2mpeg > h.mpg } { 
+	width = 800 height = 700
+    } h.gfv
+    OutputView { start = 7200 } { convert ppm:- eps2:h.eps } { 
+	width = 800 height = 700
+    } h.gfv
+    # animation of the level of refinement
+    OutputView { step = 60 } { ppm2mpeg > level.mpg } { 
+	width = 800 height = 700
+    } level.gfv
+    OutputView { start = 7200 } { convert ppm:- eps2:level.eps } { 
+	width = 800 height = 700 
+    } level.gfv
+    # animation of the velocity
+    OutputPPM { step = 60 } { ppm2mpeg > velocity.mpg } {
+	maxlevel = 10
+	v = Velocity 
+	min = 0 max = 0.25
+    }
+    # animation of the topography
+    OutputPPM { step = 60 } { ppm2mpeg > zb.mpg } {
+	maxlevel = 10
+	v = Zb
+    }
+    # graphics
+    OutputView { start = end } { convert ppm:- eps2:hmax.eps } { 
+	width = 1600 height = 1600
+    } hmax.gfv
+    OutputView { start = end } { convert ppm:- eps2:hmax-detail.eps } { 
+	width = 1600 height = 1600
+    } hmax-detail.gfv
+    EventScript { start = end } {
+	# timeseries at specific locations
+	gnuplot <<EOF
+set term postscript eps color lw 2 size 5,2 18
+
+set size ratio 0.4
+
+set output 'hani.eps'
+plot [3:5]'hanires.txt' u 1:(\$2/100.) w lp t 'observed' ps 2, \
+           'hani.txt' u (\$3/3600.):7 w l t 'modelled'
+
+set output 'male.eps'
+plot [3:5]'maleres.txt' u 1:(\$2/100.) w lp t 'observed' ps 2, \
+           'male.txt' u (\$3/3600.):7 w l t 'modelled'
+
+set output 'gana.eps'
+plot [3:5]'ganares.txt' u 1:(\$2/100.) w lp t 'observed' ps 2, \
+           'gana.txt' u (\$3/3600.):7 w l t 'modelled'
+
+set output 'dieg.eps'
+plot [3:5]'diegres.txt' u 1:(\$2/100.) w lp t 'observed' ps 2, \
+           'dieg.txt' u (\$3/3600.):7 w l t 'modelled'
+
+set output 'colo.eps'
+plot [2.5:4.5]'colores.txt' u 1:(\$2/100.) w lp t 'observed' ps 2, \
+           'colo.txt' u (\$3/3600.):7 w l t 'modelled'
+
+set output 'jason.eps'
+set xlabel 'Latitude (deg)'
+set ylabel 'Elevation (m)'
+plot [-6:20][-1:1]'jasonres.txt' u 2:4 w l t 'observed', \
+           'jason.txt' u 3:(\$3 > 19.2 ? 0 : \$8) w l t 'modelled'
+EOF
+    }
+} {
+    dry = DRY
+}
+GfsBox {
+    # inflow/outflow on all boundaries with a reference water level at
+    # z = 0
+    top = Boundary {
+	BcSubcritical V -Zb
+    }
+    bottom = Boundary {
+	BcSubcritical V -Zb
+    }
+    right = Boundary {
+	BcSubcritical U -Zb
+    }
+    left = Boundary {
+	BcSubcritical U -Zb
+    }
+}

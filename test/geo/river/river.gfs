@@ -1,0 +1,84 @@
+# Title: Geostrophic adjustment with Saint-Venant
+#
+# Description:
+#
+# Same test but using the (fully nonlinear) Saint-Venant solver.
+#
+# \begin{figure}[htbp]
+# \caption{\label{geo-error}Evolution of the maximum error on the surface height for the 
+# geostrophic adjustment problem.}
+# \begin{center}
+# \includegraphics[width=\hsize]{geo_error.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{geo-error1}Evolution of the surface-height error field. (a) $t =$1.157
+# days, (b) $t = 2.315$ days, (c) $t =$3.472 days, (d) $t =$4.630 days, (e) $t
+# =$17.361 days.}
+# \begin{center}
+# \begin{tabular}{ccccc}
+# \includegraphics[width=0.18\hsize]{error-100.eps} &
+# \includegraphics[width=0.18\hsize]{error-200.eps} &
+# \includegraphics[width=0.18\hsize]{error-300.eps} &
+# \includegraphics[width=0.18\hsize]{error-400.eps} &
+# \includegraphics[width=0.18\hsize]{error-1500.eps} \\
+#   (a) & (b) & (c) & (d) & (e)
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh geo.sh river.gfs
+# Version: 130112
+# Required files: geo.sh geo.gfv e.ref
+# Running time: 3 minutes
+# Generated files: geo_error.eps error-100.eps error-200.eps error-300.eps error-400.eps error-1500.eps
+#
+1 0 GfsRiver GfsBox GfsGEdge {} {
+  Time { iend = 1580 dtmax = 1000 }
+  Refine 6
+  Global {
+      #define L0 1000e3
+      #define H0 1000
+      #define G 0.01
+      #define R0 100e3
+      #define ETA0 599.5
+      #define F0 1.0285e-4
+  }
+  AdvectionParams { gradient = gfs_center_gradient }
+  PhysicalParams { L = L0 g = G }
+  Init {} {
+    # e-folding radius = 100 km
+    # umax = 0.5 m/s = sqrt(200)*exp(-1/2)
+    P = (H0 + ETA0*exp (-(x*x + y*y)/(R0*R0)))
+    U = 2.*G*ETA0*y/(F0*R0*R0)*exp (-(x*x + y*y)/(R0*R0))*P
+    V = - 2.*G*ETA0*x/(F0*R0*R0)*exp (-(x*x + y*y)/(R0*R0))*P
+  }
+  SourceCoriolis F0
+ 
+  OutputErrorNorm { istep = 1 } { 
+      awk '{print $3/86400. " " $9; fflush (stdout); }' > e
+  } { v = P } {
+    s = (H0 + ETA0*exp (-(x*x + y*y)/(R0*R0)))
+    v = E
+  }
+  GModule gfsview
+  OutputView {  istart = 100 iend = 500 istep = 100 } error-%ld.eps { format = EPS } geo.gfv
+  OutputView {  istart = 1500 } error-%ld.eps { format = EPS } geo.gfv
+  EventScript { start = end } {
+    cat <<EOF | gnuplot
+    set term postscript eps lw 3 color solid 20
+    set output 'geo_error.eps'
+    set xlabel 'Time (days)'
+    set ylabel 'Maximum error on surface height (m)'
+    plot 'e.ref' t 'ref' w l, 'e' t '' w l
+EOF
+  }
+}
+GfsBox {
+  left = Boundary
+  right = Boundary
+  top = Boundary
+  bottom = Boundary
+}

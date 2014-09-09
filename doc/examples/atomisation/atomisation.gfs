@@ -1,0 +1,153 @@
+# Title: Atomisation of a pulsed liquid jet
+#
+# Description:
+#
+# A dense cylindrical liquid jet is injected into a stagnant lighter
+# phase (density ratio 1/27.84). The inflow velocity is modulated
+# sinusoidally to promote the growth of primary shear
+# instabilities. Surface tension is included and ultimately controls
+# the characteristic scale of the smallest droplets.
+#
+# Animations \ref{jet} and \ref{back} illustrate the atomisation process
+# from two different view points.
+#
+# \begin{figure}[htbp]
+# \caption{\label{jet}Atomisation of a pulsed liquid jet.}
+# \begin{center}
+# \video{atomisation/jet}{640}{480}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{back}Atomisation of a pulsed liquid jet.}
+# \begin{center}
+# \video{atomisation/back}{640}{480}
+# \end{center}
+# \end{figure}
+#
+# The simulation and visualisation are computed in parallel on 4
+# processors. Dynamic load-balancing is used to distribute the charge
+# between the processors (Figure \ref{balance}).
+#
+# \begin{figure}[htbp]
+# \caption{\label{balance}Number of cells per processor as a
+# function of time illustrating the effect of dynamic load-balancing.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{balance.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh atomisation.sh
+# Version: 100715
+# Required files: atomisation.sh jet.gfv back.gfv
+# Running time: 2 days on 4 processors
+# Generated files: jet.ogv back.ogv jet.eps jet.png back.eps back.png balance.eps
+3 2 GfsSimulation GfsBox GfsGEdge {} {
+    Global {
+	#define radius 1./12.
+	#define length 0.025
+	#define level 9
+	#define Re 5800
+	#define R2(y,z) ((y)*(y) + (z)*(z))
+	#define rho(T) (T + 1./27.84*(1. - T))
+	/* Weber = rhoV^2D/sigma = 5555 */
+    }
+    Time { end = 1.6 }
+    # Initial refinement of the inlet
+    Refine (x < -0.5 + length && R2(y,z) < 2.*radius*radius ? level : 5)
+
+    # Define a static field used to enforce the boundary conditions
+    # for volume fraction corresponding to a cylindrical jet
+    Variable T0
+    InitFraction T0 (radius*radius - R2(y,z))
+
+    VariableTracerVOF T
+    VariableCurvature K T Kmax
+    SourceTension T 0.00003 K
+    SourceViscosity 2.*radius/Re*rho(T)
+    PhysicalParams { alpha = 1./rho(T) }
+    
+    # Use constant (maximum) resolution on the interface
+    AdaptFunction { istep = 1 } {
+	minlevel = 0
+	maxlevel = level 
+    } (T > 0 && T < 1)
+
+    # Initialise a short jet
+    Init {} {
+	T = (x < -0.5 + length ? T0 : 0)
+	U = T
+    }
+
+    # Dynamic load-balancing
+    EventBalance { istep = 1 } 0.1
+
+    OutputTime { istep = 1 } log
+    OutputBalance { istep = 1 } log
+    OutputProjectionStats { istep = 1 } log
+    OutputTiming { istep = 100 } log
+
+    # Use the gfsview module to generate movies on-the-fly and in parallel
+    GModule gfsview
+    OutputView { step = 4e-3 } { ppm2theora -s 640x480 > jet.ogv } {
+	format = PPM width = 1280 height = 960 
+    } jet.gfv
+    OutputView { step = 4e-3 } { ppm2theora -s 640x480 > back.ogv } {
+	format = PPM width = 1280 height = 960 
+    } back.gfv
+
+    # Save a (single) snapshot every 100 timesteps
+    EventScript { istep = 100 } { rm -f snapshot-*.gfs }
+    OutputSimulation { istep = 100 } snapshot-%ld.gfs { }
+
+    # Generate figures
+    OutputView { start = end } jet.ppm { format = PPM width = 1280 height = 960 } jet.gfv
+    OutputView { start = end } back.ppm { format = PPM width = 1280 height = 960 } back.gfv
+    EventScript { start = end } {
+	for f in jet back; do
+	    convert $f.ppm -geometry 640x480 $f.png
+	    convert $f.png $f.eps
+	    rm -f $f.ppm
+	done
+	awk '{if ($1 == "step:") t = $4; 
+              else if ($1 == "domain") print t,$3,$5,$9;}' < log > balance
+	cat <<EOF | gnuplot
+        set term postscript eps color lw 2 20 solid
+        set output 'balance.eps'
+        set xlabel 'Time'
+        set ylabel 'Number of cells per processor'
+        plot [0:1.6]'balance' u 1:2 w l t 'Minimum', \
+                    'balance' u 1:3 w l t 'Average', \
+                    'balance' u 1:4 w l t 'Maximum'
+EOF
+    }
+}
+GfsBox { pid = 0 
+    top = Boundary
+    bottom = Boundary
+    back = Boundary
+    front = Boundary
+    left = Boundary {
+	# Pulsed jet on inflow
+	BcDirichlet U T0*(1. + 0.05*sin (10.*2.*M_PI*t))
+	BcDirichlet T T0
+	BcDirichlet V 0
+	BcDirichlet W 0
+    }
+}
+GfsBox { pid = 0
+    top = Boundary
+    bottom = Boundary
+    back = Boundary
+    front = Boundary
+}
+GfsBox { pid = 1
+    top = Boundary
+    bottom = Boundary
+    back = Boundary
+    front = Boundary
+    right = BoundaryOutflow
+}
+1 2 right
+2 3 right

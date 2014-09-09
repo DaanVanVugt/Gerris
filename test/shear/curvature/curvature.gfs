@@ -1,0 +1,93 @@
+# Title: Time-reversed advection with curvature-based refinement
+#
+# Description:
+#
+# Same as the previous test but with adaptivity based on the local
+# curvature of the interface (with a maximum of eight levels of
+# refinement).
+#
+# \begin{figure}[htbp]
+# \caption{\label{advection}Interface shape and refined mesh at time 2.5.}
+# \begin{center}
+# \includegraphics[width=0.6\hsize]{t-2.5.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{error}Difference between the initial and final volume fraction fields.}
+# \begin{center}
+# \includegraphics[width=0.6\hsize]{dt-5.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{table}[htbp]
+# \caption{\label{norms}Norms of the error between the initial and final fields. The
+# reference values are given in blue.}
+# \begin{center}
+# \begin{tabular}{|c|c|c|}\hline
+# $L_1$ & $L_2$ & $L_\infty$ \\ \hline
+# \input{norms.tex}
+# \end{tabular}
+# \end{center}
+# \end{table}
+#
+# Author: St\'ephane Popinet
+# Command: sh ../shear.sh curvature.gfs
+# Version: 110917
+# Required files: ../shear.sh norms.ref curvature.gfv
+# Running time: 2 minutes
+# Generated files: t-2.5.eps dt-5.eps norms norms.tex
+#
+# The type of the simulation is GfsAdvection which only solves the advection
+# of passive tracers.
+1 0 GfsAdvection GfsBox GfsGEdge {} {
+    Time { end = 5 }
+    Refine 8
+
+    # Add tracer T, using a VOF advection scheme.
+    # The default scheme is a Van-Leer limited, second-order upwind scheme.
+    VariableTracerVOFHeight T
+
+    # Curvature K of the interface defined by T
+    VariableCurvature K T
+
+    InitFraction T (ellipse (0, -.236338, 0.2, 0.2))
+
+    # Maintain U and V with the vortical shear flow field defined by
+    # its streamfunction
+    VariableStreamFunction {
+	# make sure that the entire field is reinitialised at t = 2.5
+	step = 2.5 
+    } Psi (t < 2.5 ? 1. : -1.)*sin((x + 0.5)*M_PI)*sin((y + 0.5)*M_PI)/M_PI
+    
+    # Adapt the mesh dynamically using a custom cost function returning
+    # the cell size times the local curvature (only for cells cut by
+    # the interface).
+    # The maximum cost is set to 0.1 i.e. the radius of curvature must be
+    # resolved with at least 10 cells.
+    AdaptFunction { istep = 1 } {
+    	cmax = 0.1 maxlevel = 8
+    	cfactor = 2. 
+    } (T > 0. && T < 1.)*dL*fabs(K)
+    AdaptThickness { istep = 1 } { maxlevel = 8 } T
+
+    GModule gfsview
+    OutputView { start = 2.5 } t-2.5.eps { format = EPS line_width = 0.5 } curvature.gfv
+    
+    # Add a new variable 
+    Variable Tref
+
+    # Initialize Tref with the initial shape
+    InitFraction { start = end } Tref (ellipse (0, -.236338, 0.2, 0.2))
+
+    # Output the norms of the difference between T and Tref, stores that into
+    # new variable DT
+    OutputErrorNorm { start = end } norms { v = T } {
+        s = Tref v = DT
+    }
+
+    OutputPPM { start = end } { convert ppm:- dt-5.eps } { v = DT }
+
+    OutputScalarSum { istep = 1 } { awk '{ print $3,$5-0.8743665 }' > t } { v = T }
+}
+GfsBox {}

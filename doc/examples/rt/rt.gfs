@@ -1,0 +1,91 @@
+# Title: Rayleigh-Taylor instability
+#
+# Description:
+#
+# A classical test case for the flow of two fluids of different
+# densities. A sinusoidal interface separates the two fluids. The
+# heavier fluid is on top. A mushroom-shaped instability develops in
+# time as illustrated on Figure \ref{evolution}.
+# 
+# \begin{figure}[htbp]
+# \caption{\label{evolution}Evolution of the interface.}
+# \begin{center}
+# \begin{tabular}{ccccc}
+# \includegraphics[width=0.15\hsize]{t-0.eps} &
+# \includegraphics[width=0.15\hsize]{t-0.7.eps} &
+# \includegraphics[width=0.15\hsize]{t-0.8.eps} &
+# \includegraphics[width=0.15\hsize]{t-0.9.eps} &
+# \includegraphics[width=0.15\hsize]{t-1.eps} \\
+# $t=0$ & $t=0.7$ & $t=0.8$ & $t=0.9$ & $t=1.0$
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{movie}MPEG movies of the tracer and vorticity fields.}
+# \begin{center}
+# \begin{tabular}{cc}
+# \htmladdnormallinkfoot{\includegraphics[width=0.2\hsize]{t.eps}}{t.mpg} &
+# \htmladdnormallinkfoot{\includegraphics[width=0.2\hsize]{vort.eps}}{vort.mpg}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: gerris2D rt.gfs | gfsview2D rt.gfv
+# Version: 1.1.0
+# Required files: rt.gfv
+# Running time: 12 minutes
+# Generated files: t.mpg vort.mpg t.eps vort.eps t-0.eps t-0.7.eps t-0.8.eps t-0.9.eps t-1.eps
+#
+4 3 GfsSimulation GfsBox GfsGEdge {} {
+  Time { end = 1 dtmax = 5e-3 }
+  Refine 7
+
+  # The tracer T is used to track both phases
+  VariableTracerVOF {} T
+ 
+  # The initial sinusoidal interface (translated by 0.5 along the y-axis)
+  InitFraction {} T (0.05*cos (2.*M_PI*x) + y) { ty = 0.5 }
+
+  AdaptVorticity { istep = 1 } { maxlevel = 7 cmax = 2e-2 }
+  AdaptGradient { istep = 1 } { maxlevel = 7 cmax = 1e-2 } T
+
+  # The dynamic viscosity for both phases
+  SourceViscosity {} 0.00313
+
+  # This defines the inverse of the density of the fluids as a
+  # function of T
+  PhysicalParams { alpha = 1./(T*1.225 + (1. - T)*0.1694) }
+
+  # We also need gravity
+  Source {} V -9.81
+
+  OutputTime { istep = 10 } stderr
+  OutputBalance { istep = 10 } stderr
+  OutputProjectionStats { istep = 10 } stderr
+  OutputDiffusionStats { istep = 10 } stderr
+  OutputPPM { istep = 2 } { ppm2mpeg > vort.mpg} {
+    min = -30 max = 30 v = Vorticity
+  }
+  OutputPPM { istep = 2 } { ppm2mpeg > t.mpg } {
+    min = 0 max = 1 v = T
+  }
+  OutputPPM { start = end } { convert -colors 256 ppm:- vort.eps } {
+    min = -30 max = 30 v = Vorticity
+  }
+  OutputPPM { start = end } { convert -colors 256 ppm:- t.eps } {
+    min = 0 max = 1 v = T
+  }
+  OutputTiming { start = end } stderr
+  OutputSimulation { step = 0.1 } stdout
+  EventScript { start = 0 } { echo "Save t-0.eps { format = EPS }" }
+  EventScript { start = 0.7 step = 0.1 } { echo "Save t-$GfsTime.eps { format = EPS }" }
+}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+1 2 top
+2 3 top
+1 4 bottom

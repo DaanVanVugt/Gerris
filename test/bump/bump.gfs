@@ -1,0 +1,115 @@
+# Title: Relaxation of a charge bump
+#
+# Description:
+#
+# A concentrated bump of charge of the form,
+# $$
+# \rho_e(x,t=0)=\frac{\exp{-\frac{x^2+y^2}{2a^2}}}{a \sqrt{2 \pi}}
+# $$
+# is initially set in a single fluid of conductivity $K$ and
+# permittivity $\varepsilon$. Due to conduction the bump decays
+# exponentially in time (see figure \ref{decay}) as
+# $$
+# \rho_e(x,t)=\rho_e(x,t=0) \exp{(-K t/\varepsilon)} \label{td}
+# $$
+# while preserving the initial geometry (see figure \ref{profile}).
+#
+# A more detailed discussion of this simulation is given in
+# \cite{lopez-herrera2011}.
+#
+# \begin{figure}[htbp]
+# \caption{\label{decay} Temporal decay of the charge density at
+# (0,0). (Continuous) analytical solution, (symbols)
+# Gerris EHD module.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{profile.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp] 
+# \caption{\label{profile} Spatial distribution of charge density
+# along the radial axis (times equal 0, 2, 4 and 6 are shown). (continuous)
+# analytical solution, (symbols) present simulation.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{figure.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{norms}Evolution of the norms of the error on the charge density
+# distribution shown in figure \ref{profile}.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: Jose M. L\'opez-Herrera S\'anchez
+# Command: sh bump.sh
+# Version: 100610
+# Required files: bump.sh norms-explicit.ref norms-implicit.ref
+# Running time: 30 seconds
+# Generated files: profile.eps figure.eps error.eps
+
+GModule electrohydro
+
+1 0 GfsElectroHydro GfsBox GfsGEdge {} {
+    Global {
+	#define a 0.05
+        #define perm 2.0
+        #define K 1.0
+        double gaussbell (double x, double y, double t) {
+	  double alpha = (x*x + y*y)/2./a/a;
+	  double beta = a*sqrt(2.*M_PI);
+          double te = perm/K;
+	  return exp(-alpha)/beta*exp(-t/te);
+        }
+    }
+    VariableTracer Rhoe
+    Refine 7*(1. - 4.*(x*x + y*y))
+    Time { end = 6 dtmax = 1e-2 }
+    Init {} { Rhoe = gaussbell(x,y,0) }
+
+#    OutputTime { istep = 5 } stderr
+#    OutputScalarNorm { istep = 5 } stderr { v = Rhoe }
+    SourceDiffusionExplicit Rhoe 1 Phi
+#    SourceDiffusion Rhoe 1 { beta = 0.5 } Phi
+
+    OutputSimulation { start = 0 } {
+	awk '{ if ($1 != "#") print sqrt($1*$1+$2*$2),$11 > "t_0-SCHEME"; }'
+    } { format = text }
+    OutputSimulation { start = 2 } {
+	awk '{ if ($1 != "#") print sqrt($1*$1+$2*$2),$11 > "t_2-SCHEME"; }'
+    } { format = text }
+    OutputSimulation { start = 4 } {
+	awk '{ if ($1 != "#") print sqrt($1*$1+$2*$2),$11 > "t_4-SCHEME"; }'
+    } { format = text }
+    OutputSimulation { start = 6 } {
+	awk '{ if ($1 != "#") print sqrt($1*$1+$2*$2),$11 > "t_6-SCHEME"; }'
+    } { format = text }
+
+    OutputErrorNorm { istep = 10 } norms-SCHEME { v = Rhoe } { s = gaussbell(x,y,t) }
+    OutputLocation { istep = 10 } { 
+        awk '
+         BEGIN {
+                a = 0.05 
+                perm = 2.
+                K = 1.
+                rhoinic = 1./a/sqrt(2.*3.14159265358979)
+         } 
+         {
+            if ($1 != "#")
+                print $1, rhoinic*exp(-$1*K/perm), $12;
+         }' > timevol-SCHEME
+    } { 0. 0. 0. }
+} {
+    # Electric parameters
+    perm = 2
+    charge = Rhoe
+    GfsElectricProjectionParams { tolerance = 1e-7 }
+}
+GfsBox {
+    left   = Boundary { BcDirichlet Phi 0 }
+    right  = Boundary { BcDirichlet Phi 0 }
+    top    = Boundary { BcDirichlet Phi 0 }
+    bottom = Boundary { BcDirichlet Phi 0 }
+}

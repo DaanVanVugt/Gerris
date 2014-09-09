@@ -1,0 +1,68 @@
+# Title: Geostrophic adjustment on a beta-plane
+#
+# Description:
+#
+# Same as before but a beta-plane, $f = f_0 + \beta y$ is used and
+# the advection terms are included in the momentum equation. No
+# explicit dissipation is added. As in {\cite{dupont}} we chose $\beta
+# = 1.607 \times 10^{- 11}$ m$^{- 1}$s$^{- 1}$.  The geostrophic eddy
+# moves slowly westward through the emission of Rossby waves and
+# southward due to the non-linear advection term. The resulting
+# evolution of the total energy is shown on figure \ref{energy}. For
+# our method, the slow decrease in the total energy is due both to the
+# dissipation of potential energy induced by the approximate
+# projection operator and to the dissipative properties of the BCG
+# upwind advection scheme. Another run with the advection terms
+# switched off (figure \ref{energy}, green curve) confirms that the
+# dissipation induced by the approximate projection operator dominates
+# the total dissipation. The results however compare favourably with
+# the finite-element formulations tested by Dupont which all show
+# significantly larger energy dissipation.
+#
+# \begin{figure}[htbp]
+# \caption{\label{energy}Evolution
+# of the total energy for the non-linear geostrophic adjustment problem. The
+# C-grid model is based on Sadourny {\cite{}} and implemented by Dupont
+# {\cite{dupont}}. The finite-element formulations are those studied by Dupont. LW:
+# Lynch and Werner {\cite{lynch87}}, LLS: Le Roux et al {\cite{leroux98}}, PZM: Peraire et al
+# {\cite{peraire86}}.}
+# \begin{center}
+# \includegraphics[width=\hsize]{energy.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh beta.sh beta.gfs
+# Version: 100323
+# Required files: beta.sh c dlw lls pzm llw energy.ref energy-nonlinear.ref
+# Running time: 3 minutes
+# Generated files: energy.eps
+#
+1 0 GfsOcean GfsBox GfsGEdge {} {
+  # dt = 1000 s
+  Time { iend = 1580 dtmax = 0.10285 }
+  Refine 6
+  # Lx = Ly = 1000 km
+  # H0 = 1000 m
+  # g = 0.01 m/s^2
+  PhysicalParams { g = 9.4534734306584e-4 }
+  ApproxProjectionParams { tolerance = 1e-6 }
+  Solid (z + 1.)
+  Init {} {
+    # e-folding radius = 100 km
+    # umax = 0.5 m/s = sqrt(200)*exp(-1/2)
+    U = (5.667583815e-4*200.*y*exp (-100.*(x*x + y*y)))
+    V = (- 5.667583815e-4*200.*x*exp (-100.*(x*x + y*y)))
+    P = (5.667583815e-4*exp (-100.*(x*x + y*y)))
+  }
+  # f0 = 1.0285e-4 s-1
+  # beta = 1.607e-11 m-1s-1
+  SourceCoriolis (1. + 0.156246961595*(y + 0.5))
+
+  OutputScalarSum { istep = 150 } { 
+      awk '{print $3/1.0285e-4/3600./24. " " $5/9.683940e-11}' > energy 
+  } { v = (Velocity2 + P*P/9.4534734306584e-4) }
+}
+GfsBox {
+  front = Boundary
+}

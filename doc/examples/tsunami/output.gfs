@@ -1,0 +1,115 @@
+# Cocos Islands, Australia
+OutputScalarStats { istep = 1 } coco.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(96.88,-12.13)
+}
+OutputLocation { istep = 1 } cocoloc.txt 96.88 -12.13 -1 { interpolate = 0 }
+# Colombo, Sri Lanka
+OutputScalarStats { istep = 1 } colo.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(79.83,6.93)
+}
+OutputLocation { istep = 1 } cololoc.txt 79.83 6.93 -1 { interpolate = 0 }
+# Hanimaadhoo, Maldives
+OutputScalarStats { istep = 1 } hani.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(73.18,6.77)
+}
+OutputLocation { istep = 1 } haniloc.txt 73.18 6.77 -1 { interpolate = 0 }
+# Male, Maldives
+OutputScalarStats { istep = 1 } male.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(73.52,4.18)
+}
+OutputLocation { istep = 1 } maleloc.txt 73.52 4.18 -1 { interpolate = 0 }
+# Gan, Maldives
+OutputScalarStats { istep = 1 } gana.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(73.17,-0.68)
+}
+OutputLocation { istep = 1 } ganaloc.txt 73.17 -0.68 -1 { interpolate = 0 }
+# Diego Garcia, UK
+OutputScalarStats { istep = 1 } dieg.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(72.38,-7.3)
+}
+OutputLocation { istep = 1 } diegloc.txt 72.38 -7.3 -1 { interpolate = 0 }
+# Rodriguez I., Mauritius
+OutputScalarStats { istep = 1 } rodr.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(63.42,-19.67)
+}
+OutputLocation { istep = 1 } rodrloc.txt 63.42 -19.67 -1 { interpolate = 0 }
+# Port Louis, Mauritius
+OutputScalarStats { istep = 1 } loui.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(57.5,-20.15)
+}
+OutputLocation { istep = 1 } louiloc.txt 57.5 -20.15 -1 { interpolate = 0 }
+# La Reunion, France
+OutputScalarStats { istep = 1 } lare.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(55.3,-20.92)
+}
+OutputLocation { istep = 1 } lareloc.txt 55.3 -20.92 -1 { interpolate = 0 }
+# Hillarys, Australia
+OutputScalarStats { istep = 1 } hill.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(115.73,-31.82)
+}
+OutputLocation { istep = 1 } hillloc.txt 115.73 -31.82 -1 { interpolate = 0 }
+# Salalah, Oman
+OutputScalarStats { istep = 1 } sala.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(54,17)
+}
+OutputLocation { istep = 1 } salaloc.txt 54 17 -1 { interpolate = 0 }
+# Pointe La Rue, Seychelles
+OutputScalarStats { istep = 1 } laru.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(55.53,-4.68)
+}
+OutputLocation { istep = 1 } laruloc.txt 55.53 -4.68 -1 { interpolate = 0 }
+# Lamu, Kenya
+OutputScalarStats { istep = 1 } lamu.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(40.9,-2.27)
+}
+OutputLocation { istep = 1 } lamuloc.txt 40.9 -2.27 -1 { interpolate = 0 }
+# Zanzibar, Tanzania
+OutputScalarStats { istep = 1 } zanz.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(39.18,-6.15)
+}
+OutputLocation { istep = 1 } zanzloc.txt 39.18 -6.15 -1 { interpolate = 0 }
+# Chennai, India
+OutputScalarStats { istep = 1 } chen.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(80.3,13.1)
+}
+OutputLocation { istep = 1 } chenloc.txt 80.3 13.1 -1 { interpolate = 0 }
+# Paradip, India
+OutputScalarStats { istep = 1 } para.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(86.7,20.26)
+}
+OutputLocation { istep = 1 } paraloc.txt 86.7 20.26 -1 { interpolate = 0 }
+# Visakhapatnam, India
+OutputScalarStats { istep = 1 } visa.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(83.28,17.68)
+}
+OutputLocation { istep = 1 } visaloc.txt 83.28 17.68 -1 { interpolate = 0 }
+# Kochi, India
+OutputScalarStats { istep = 1 } koch.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(76.26,9.96)
+}
+OutputLocation { istep = 1 } kochloc.txt 76.26 9.96 -1 { interpolate = 0 }
+# Mormugao, India
+OutputScalarStats { istep = 1 } morm.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(73.8,15.42)
+}
+OutputLocation { istep = 1 } mormloc.txt 73.8 15.42 -1 { interpolate = 0 }
+# Okha, India
+OutputScalarStats { istep = 1 } okha.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(69.08,22.47)
+}
+OutputLocation { istep = 1 } okhaloc.txt 69.08 22.47 -1 { interpolate = 0 }
+# Tuticorin, India
+OutputScalarStats { istep = 1 } tuti.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(78.15,8.8)
+}
+OutputLocation { istep = 1 } tutiloc.txt 78.15 8.8 -1 { interpolate = 0 }
+# Tarutao, Thailand
+OutputScalarStats { istep = 1 } taru.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(99.65,6.702)
+}
+OutputLocation { istep = 1 } taruloc.txt 99.65 6.702 -1 { interpolate = 0 }
+# Tapaonoi, Thailand
+OutputScalarStats { istep = 1 } tapa.txt {
+   v = (P > 0.01 ? H : NODATA) condition = close_enough(98.425,7.765)
+}
+OutputLocation { istep = 1 } tapaloc.txt 98.425 7.765 -1 { interpolate = 0 }

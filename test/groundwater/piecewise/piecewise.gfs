@@ -1,0 +1,106 @@
+# Title: Groundwater flow with piecewise constant permeability
+#
+# Description:
+#
+# Discontinuities of hydraulic conductivity are common in groundwater
+# flow.  They can be handled by Gerris's projection method using the
+# \texttt{alpha} keyword in \texttt{GfsPhysicalParams}.
+#
+# Even with nonuniform porosity, the discharge velocity will be
+# divergence-free \cite[p.~198]{bear88} (assuming only that the local
+# liquid density is constant).  Applying that condition to Darcy's
+# flux law yields
+# \begin{displaymath}
+#   \nabla\cdot\left(k\nabla p\right) = \nabla\cdot\mathbf u\,,
+# \end{displaymath}
+# which closely resembles the projection Poisson equation used in
+# Gerris~\cite[eq.~7]{popinet2009}:
+# \begin{displaymath}
+#   \nabla\cdot\left[\frac{\Delta t}{\rho_{n+\frac{1}{2}}} \nabla
+#   p_{n+\frac{1}{2}}\right] = \nabla\cdot\mathbf u_{*}.
+# \end{displaymath}
+# noting that the (here false) time-step $\Delta t$ will be uniform in
+# space and so can be taken outside the divergence, all that is
+# required is to identify the `density' $\rho_{n+\frac{1}{2}}$ with
+# something inversely proportional to the permeability.  As Gerris is
+# told about this density via its reciprocal \texttt{alpha} in
+# \texttt{GfsPhysicalParams}, we just that proportional to
+# permeability.
+#
+# In many soils, the permeability varies in proportion to the
+# porosity~\cite[p.~94]{harr77}, so this \texttt{alpha} factor can be
+# seen as the porosity too, in which case it reflects the difference
+# between the `discharge' and `seepage' velocities, the first being
+# the one that is calculated by Gerris and corresponding to
+# macroscopic measurements while the latter is that in the pores.  The
+# relation between the two is simply that the discharge velocity is
+# the seepage velocity times the porosity~\cite[p.~23]{bear88}.
+#
+# Here we modify the first example by halving the porosity in the last
+# third of the aquifer (so that it has the same total hydraulic
+# resistance as the first two thirds).  The exact solution has the
+# velocity field exactly as before, but with a steeper azimuthal
+# pressure gradient beyond porosity jump at $\theta < -\pi/3$.
+#
+# \begin{figure}[htbp]
+# \caption{Isobars and velocity vectors, for Darcy
+# flow in a confined annular sector aquifer with separate reservoir
+# and drain, and halved permeability in the most-clockwise third
+# sector.}
+# \begin{center}
+# \includegraphics[width=0.6\hsize]{solution.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp] 
+# \caption{Grid-convergence of the pressure and
+# velocity, for Darcy flow with piecewise constant permeability.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{convergence.eps}
+# \end{center} 
+# \end{figure}
+#
+# Author: G. D. McBain
+# Command: sh ../groundwater.sh piecewise.gfs
+# Version: 120731
+# Required files: piecewise.gfv p.ref U.ref
+# Running time: 52 s
+# Generated files: convergence.eps solution.eps
+#
+Define THETA atan2(y,x) 
+1 0 GfsSimulation GfsBox GfsGEdge { x = 0.5 y = -0.5 } {
+    Time { dtmax = 1 }
+    Refine LEVEL
+    AdvectionParams { scheme = none }
+    Solid (-difference(ellipse(0,0,0.7,0.7), ellipse(0,0,0.3,0.3)))
+    SourceCoriolis 0 1
+    EventStop { istep = 1 } U 1e-9
+    Variable k
+    Init {} { k = THETA>-M_PI/3 ? 1 : 0.5 }
+    PhysicalParams { alpha = k }
+
+    EventList { start = end } {
+	OutputErrorNorm {} { awk '{print LEVEL, $5, $7, $9}' >> p } { v = P } {
+	    s = THETA>-M_PI/3 ? THETA : 2*THETA+M_PI/3
+	}
+	OutputErrorNorm {} { awk '{print LEVEL, $5, $7, $9}' >> U } { v = U } {
+	    s = y / (x*x + y*y)
+	}
+	OutputErrorNorm {} { awk '{print LEVEL, $5, $7, $9}' >> V } { v = V } {
+	    s = -x / (x*x + y*y)
+	}
+	OutputSimulation {} solution.gfs	
+    }
+}
+Box { 
+    top = Boundary { 
+	BcDirichlet P 0
+	BcDirichlet U 0
+	BcNeumann V 0
+    } 
+    left = Boundary {
+	BcDirichlet P -2*M_PI/3
+	BcNeumann U 0
+	BcDirichlet V 0
+    }
+}

@@ -1,0 +1,87 @@
+# Title: Bagnold flow of a granular material
+#
+# Description:
+#
+# The flow of a granular material down an inclined plane is simulated
+# using a "$\mu(I)$" rheology. The computed velocity profile is
+# compared with Bagnold's theoretical solution.
+# Figure \ref{convergence} illustrates the norms of the error between
+# the computed and theoretical solutions as functions of spatial
+# resolution.
+#
+# \begin{figure}[htbp]
+# \caption{\label{convergence}Convergence of the error norms as functions
+# of resolution (number of grid points across the channel).}
+# \begin{center}
+# \includegraphics[width=\hsize]{convergence.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: Pierre-Yves Lagr\'ee
+# Command: sh ../poiseuille.sh bagnold.gfs
+# Version: 100416
+# Required files: error.ref
+# Generated files: convergence.eps
+#
+
+# Slope angle
+Define ALPHA 0.43
+# Grain size
+Define D 0.04
+# Bagnold's solution
+Define U0 (sqrt(cos(ALPHA))*(-0.114 + 0.3*tan(ALPHA))/(D*(0.64 - tan(ALPHA))))
+Define UB(x) ((1. - pow(1. - x, 1.5))*2./3.*U0)
+
+1 1 GfsSimulation GfsBox GfsGEdge { y = 0.5 } {
+    Time { iend = 1000 dtmax = 5 }
+
+    # Ignore inertia
+    AdvectionParams {
+	scheme = none
+    }
+    ApproxProjectionParams { tolerance = 1e-8 }
+    ProjectionParams { tolerance = 1e-8 }
+
+    # mu(I) granular rheology
+    SourceViscosity {} {
+	double In = sqrt(2.)*D*D2/sqrt(fabs(P));
+	double muI = .38 + (.26)*In/(.3 + In);
+	return MAX((muI*P)/(sqrt(2.)*D2), 0.);
+    } { beta = 1 }
+
+    # gravity
+    Source V -cos(ALPHA)
+    Source U  sin(ALPHA)
+
+    Refine LEVEL
+    Init {} {
+	# Start with an arbitrary velocity profile, here twice
+	# Bagnold's solution
+	U = 2.*UB(y)
+	# Start with the hydrostatic pressure profile
+	P = (1. - y)*cos(ALPHA)
+    }
+
+    OutputTime { istep = 10 } stderr
+    OutputProjectionStats { istep = 10 } stderr
+    OutputDiffusionStats { istep = 10 } stderr
+
+    EventStop { istart = 10 istep = 10 } U 5e-6 DU
+    OutputScalarNorm { istep = 10 } du-LEVEL { v = DU }
+
+    OutputSimulation { start = end } end-LEVEL.txt { format = text }
+    OutputErrorNorm { start = end } { awk '{print LEVEL,$5,$7,$9}' } { v = U } { 
+	# Bagnold's solution
+        s = UB(y)
+    }
+}
+GfsBox {
+    top = Boundary {
+        BcNeumann V 0
+        BcDirichlet P 0
+    }
+    bottom = Boundary {
+        BcDirichlet U 0
+    }
+}
+1 1 right

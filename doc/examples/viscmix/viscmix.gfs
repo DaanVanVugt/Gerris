@@ -1,0 +1,170 @@
+# Title: Viscous folding of a fluid interface
+#
+# Description:
+#
+# An example of mixing between two viscous fluids at low Reynolds
+# number. The two fluids are physically identical, and differentiated
+# by a tracer.
+#
+# A sinusoidally varying Poiseuille flow applied in the upper half of
+# the domain on the left boundary drives mixing between a cavity and
+# the main flow. Over time the fluid in the cavity is replaced by
+# lobes of the main fluid which are injected as the driving flow slows
+# down.
+#
+# These flows are described by the Reynolds number $Re$ (which is low
+# in this case) and the product of the Reynolds number and a Strouhal
+# number, $Sr$, which defines the frequency with which the driving
+# Pouseille flow oscillates. For more details, see
+# \url{http://dx.doi.org/10.1017/S0022112001006917}{Horner et al
+# (2002)}.
+#
+# These flows are simple systems which can represent a number of
+# mixing processes in geological fluid mechanics, such as mixing two
+# different kinds of magma. Similar flows have also been suggested as
+# strategies for mixing (or preventing mixing) groundwater in
+# underground aquifers, where the driving flow is provided by
+# injecting and withdrawing water from pairs of wells.
+#
+# Adaptive refinement is used to resolve the interface and the
+# velocity field. The simulation slows down over time as the interface
+# stretches rapidly both in the cavity and within the main flow. A
+# high degree of refinement is needed to resolve the interface at long
+# times. In this example the lack of resolution results in the
+# formation of droplets from the stretched and thinned lobes both in
+# the cavity and in the channel.
+#
+# The movie which is generated shows the interface between the two
+# fluids and the logarithm of the dimensionless velocity magnitude
+# (Figure~\ref{viscmix}), which shows the weak counter-rotating flows
+# which form in the cavity in response to the driving Poiseuille flow.
+#
+# \begin{figure}[htbp]
+# \caption{\label{viscmix}MPEG movie of the tracer field and logarithm of the
+# velocity magnitude.}
+# \label{tracer}
+# \begin{center}
+# \htmladdnormallinkfoot{\includegraphics[width=0.8\hsize]{viscmix.eps}}{viscmix.mpg}
+# \end{center}
+# \end{figure}
+#
+# Author: Jess Robertson
+# Command: sh run.sh
+# Version: 120713
+# Required files: run.sh viscmix.gfv
+# Running time: 33 minutes in parallel on 4 processors
+# Generated files: viscmix.eps viscmix.mpg
+4 3 GfsSimulation GfsBox GfsGEdge {} {
+    Global {
+        // Parameters
+        static double Re = 50;
+        static double ReSr = 1.2;
+        static double cavity_depth = 1.0;
+        static double floor_depth = 0.5;
+
+        // Solver parameters
+        static int min_level = 4;
+        static int max_level = 8;
+
+        // Density functions
+        static double density(double tracer) {
+            return 1.0;
+        }
+
+        // Velocity distributions
+        static double velocity_bc(double y, double t) {
+            if (y > floor_depth) return (0.125*(2*y - 1)*(2*y - 1)*(cos(2*M_PI*t*(ReSr / Re)) + 1));
+            else return 0;
+        }
+
+        // Initial tracer distribution
+        static double tracer_init(double y) {
+            if (y <= floor_depth) return 1.0;
+            else return 0.0;
+        }
+    }
+
+    # Define the depth of the cavity by filling the region below it
+    # with solid. The cavity will be filled with tracer on
+    # initialisation. Gerris will remove the cells which are
+    # completely solid.
+    Solid ({
+        return y - (floor_depth - cavity_depth);
+    })
+
+    # Specify simulation times
+    Time { end = 250 }
+
+    # The viscosity is nu = 1/Re.
+    SourceViscosity (1/Re)
+
+    # Initialise the tracer location
+    VariableTracerVOF T
+    Init {} {
+        T = tracer_init(y)
+        U = velocity_bc(y, 0)
+        V = 0
+    }
+
+    # We want adaptivity around the fluid interface
+    AdaptFunction { istep = 1 } {
+	cmax = 0
+	minlevel = min_level
+	maxlevel = max_level 
+    } (T > 0 && T < 1)
+
+    # We also need to control the error on the velocity field
+    AdaptError { istep = 1 } { cmax = 1e-2 maxlevel = max_level } U
+    AdaptError { istep = 1 } { cmax = 1e-2 maxlevel = max_level } V
+
+    # Balance the number of elements across parallel subdomains at
+    # every timestep if the imbalance is larger than 0.1 (i.e. 10%
+    # difference between the largest and smallest subdomains).
+    EventBalance { istep = 1 } 0.1
+
+    # Output of solution information/data
+    OutputTime { istep = 10 } stderr
+    OutputProjectionStats { istep = 10 } stderr
+    OutputDiffusionStats { istep = 10 } stderr
+    OutputTiming { start = end } stderr
+
+    # use gfsview to generate movies and figures
+    GModule gfsview
+    OutputView { step = 0.5 } { ppm2mpeg -s 400x300 > viscmix.mpg } { 
+	width = 1280 height = 960 
+    } viscmix.gfv
+    OutputView { start = end } { convert -colors 256 ppm:- viscmix.eps } { 
+	width = 1280 height = 960
+    } viscmix.gfv
+}
+
+# Default boundary conditions are free-slip & impermeable
+GfsBox {
+    bottom = Boundary {
+        BcDirichlet U 0
+    }
+    left = Boundary {
+        BcDirichlet V 0
+    }
+    right = Boundary {
+        BcDirichlet V 0
+    }
+}
+GfsBox {
+    left = Boundary {
+        BcDirichlet U velocity_bc(y, t)
+    }
+    bottom = Boundary {
+        BcDirichlet U 0
+    }
+}
+GfsBox {}
+GfsBox {
+    bottom = Boundary {
+        BcDirichlet U 0
+    }
+    right = BoundaryOutflow
+}
+1 3 top
+2 3 right
+3 4 right

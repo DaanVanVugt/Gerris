@@ -1,0 +1,74 @@
+# Title: Comparison between explicit and implicit diffusion schemes on concentration tracer
+#
+# Description:
+#
+# A non-homogeneous concentration confined in an annular gap relaxes
+# by diffusion to the equilibrium state. This test case compares the
+# solutions obtained using the implicit and the explicit diffusion
+# schemes over a concentration. The total amount of the species is
+# preserved with both schemes to within $2\times 10^{-7}$.
+#
+# The radial concentration profiles for both schemes are illustrated in
+# Figure \ref{profile}.
+#
+# \begin{figure}[htbp]
+# \caption{\label{profile}Radial concentration profile at time t=0.005.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{profile.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: Jose Lopez-Herrera
+# Command: sh concentration.sh
+# Version: 121023
+# Required files: concentration.sh
+# Generated files: profile.eps
+#
+Define R sqrt(x*x+y*y)
+Define R0 0.25
+Define GAUSSIAN (exp(-250.*((R-R0)*(R-R0))))
+1 0 GfsAdvection GfsBox GfsGEdge {} {
+    VariableTracerVOF T
+    VariableTracer T1 { scheme = none }
+    VariableVOFConcentration C T
+    Refine 5
+    InitFraction T (-difference(sphere(0,0,0,0.4),sphere(0,0,0,0.1)))
+    Init {} {
+	C = GAUSSIAN*T
+	T1 = C
+    }
+
+#    GModule hypre
+    SourceDiffusion T1 T/(T+1.e9*(1.-T)*(1.-T)) {beta = 1}
+    SourceDiffusionExplicit C T/(T+1.e9*(1.-T)*(1.-T))
+#    SourceDiffusion C T/(T+1.e9*(1.-T)*(1.-T))
+
+
+    Time { end = 0.02 dtmax = 9e-5 }
+
+    OutputSimulation { start = 0.01 } end.gfs
+    OutputScalarSum {istep = 10}  T1vol { v = T1 }
+    OutputScalarSum {istep = 10}  Cvol { v = C }
+    EventScript { start = end } {
+	conservation() 
+        {
+	    if awk -v tolerance=$1 'BEGIN { min = 1.; max = -1.; }{ 
+              if ($5 > max) max = $5; 
+              if ($5 < min) min = $5; 
+            }END{ if (max - min > tolerance) { print max - min > "/dev/stderr"; exit (1); } }'; then
+		:
+	    else
+		exit $GFS_STOP;
+	    fi
+	}
+        conservation 2.1e-7 < T1vol
+        conservation 2.1e-7 < Cvol
+    }
+    OutputSimulation {start = 0.005} {
+	awk '{
+           if ($1 != "#" && $8 > 0.)
+             print sqrt($1*$1+$2*$2),$12,$13;
+        }' > prof
+    } { format = text}
+}
+GfsBox {}

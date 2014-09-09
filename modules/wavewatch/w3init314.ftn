@@ -1,0 +1,127 @@
+!/ ------------------------------------------------------------------- /
+!
+! Initialisation of Wavewatch III (version 3.14) when used with Gerris
+! Adapted from ww3_shel.ftn, S. Popinet, 2009       (-*-F90-*-)
+!
+!/ ------------------------------------------------------------------- /
+      MODULE GFSW3INIT
+      USE W3GDATMD
+      USE W3WDATMD, ONLY: TIME, W3NDAT, W3DIMW, W3SETW
+      USE W3ADATMD, ONLY: W3NAUX, W3DIMA, W3SETA
+      USE W3IDATMD
+      USE W3ODATMD, ONLY: W3NOUT, W3SETO
+      USE W3ODATMD, ONLY: NAPROC, IAPROC, NAPOUT, NAPERR,             &
+                          NOGRD, IDOUT, FNMPRE, IOSTYP
+!/
+      USE W3INITMD
+!/
+      IMPLICIT NONE
+!
+!/ ------------------------------------------------------------------- /
+!/ Local parameters
+!/
+      INTEGER             :: NDSO, NDSE, NDST,     &
+                             NDS(13), NTRACE(2),      &
+                             ODAT(30),       &
+                             MPI_COMM = -99, &
+                             IPRT(6)
+      REAL, ALLOCATABLE   :: X(:), Y(:)
+      LOGICAL             :: FLGRD(NOGRD), PRTFRM
+      CHARACTER(LEN=10),                                              &
+              ALLOCATABLE :: PNAMES(:)
+!/
+!/ ------------------------------------------------------------------- /
+!/
+      PUBLIC
+CONTAINS
+      SUBROUTINE GFSW3_INIT ( )
+      IMPLICIT NONE
+!
+!--- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+! 0.  Set up data structures
+!
+      CALL W3NMOD ( 1, 6, 6 )
+      CALL W3NDAT (    6, 6 )
+      CALL W3NAUX (    6, 6 )
+      CALL W3NOUT (    6, 6 )
+      CALL W3NINP (    6, 6 )
+!
+      CALL W3SETG ( 1, 6, 6 )
+      CALL W3SETW ( 1, 6, 6 )
+      CALL W3SETA ( 1, 6, 6 )
+      CALL W3SETO ( 1, 6, 6 )
+      CALL W3SETI ( 1, 6, 6 )
+
+! Time is not set
+      TIME(1) = -1
+!
+!/SHRD      NAPROC = 1
+!/SHRD      IAPROC = 1
+!
+!/MPI      IAPROC = IAPROC + 1
+!
+!/NCO/!     IF ( IAPROC .EQ. 1 ) CALL W3TAGB                         &
+!/NCO/!                         ('WAVEFCST',1998,0007,0050,'NP21   ')
+!
+!--- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+! 1.  IO set-up
+! 1.a For shell
+!
+      NDSO   =  20
+      NDSE   =  20
+      NDST   =  20
+!
+!/NCO/!
+!/NCO/! Redo according to NCO standard and docblock
+!/NCO/!
+!/NCO      NDSO   =  6
+!/NCO      NDSE   = NDSO
+!/NCO      NDST   = NDSO
+!
+      NAPOUT = 1
+      NAPERR = 1
+!
+! 1.b For WAVEWATCH-III (See W3INIT)
+!
+      NDS( 1) = 20
+      NDS( 2) = 20
+      NDS( 3) = 20
+      NDS( 4) = 20
+      NDS( 5) = 30
+      NDS( 6) = 30
+      NDS( 7) = 31
+      NDS( 8) = 32
+      NDS( 9) = 33
+      NDS(10) = 35
+      NDS(11) = 22
+      NDS(12) = 23
+      NDS(13) = 34
+!
+      NTRACE(1) =  NDS(3)
+      NTRACE(2) =  10
+!
+!/NCO/!
+!/NCO/! Redo according to NCO standard and docblock
+!/NCO/!
+!/NCO      NDS( 1) = 51
+!/NCO      NDS( 2) = NDSO
+!/NCO      NDS( 3) = NDSO
+!/NCO      NDS( 4) = NDSO
+!/NCO      NDS( 5) = 20
+!/NCO      NDS( 6) = 21
+!/NCO      NDS( 7) = 52
+!/NCO      NDS( 8) = 53
+!/NCO      NDS( 9) = 22
+!/NCO      NDS(10) = 71
+!/NCO      NDS(11) = 23
+!/NCO      NDS(12) = 54
+!/NCO      NDS(13) = 55
+!/NCO      NTRACE(1) = NDSO
+!
+! 5.a Wave model
+!
+      CALL W3INIT ( 1, 'ww3', NDS, NTRACE, ODAT, FLGRD, 0, X, Y,   &
+                    PNAMES, IPRT, PRTFRM, -99 )
+      RETURN
+      END SUBROUTINE GFSW3_INIT
+    END MODULE GFSW3INIT

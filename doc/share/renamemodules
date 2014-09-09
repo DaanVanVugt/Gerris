@@ -1,0 +1,8 @@
+for f in *.html; do
+    sed -e 's/<span>Modules<\/span>/<span>Classes<\/span>/g' \
+        -e 's/>Modules</>Classes</g' \
+        -e 's/^Modules</Classes</g' \
+        -e 's/Here is a list of all modules:/Here is a list of all classes:/g' \
+	 < $f > $f.renamed
+    mv -f $f.renamed $f
+done

@@ -1,0 +1,78 @@
+# Title: Convergence with a refined circle
+#
+# Description:
+#
+# Same as the previous test but in order to test the accuracy of the
+# gradient operator at coarse/fine boundaries, two levels of
+# refinement are added in a circle centered on the origin and of
+# radius 0.25.
+#
+# The solver still shows second-order accuracy in all norms (Figure \ref{order}).
+#
+# \begin{figure}[htbp]
+# \caption{\label{residual}Evolution of the residual.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{residual.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{rate}Average reduction factor.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{rate.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{error}Evolution of the error as a function of resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{order}Corresponding convergence order.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{order.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh ../poisson.sh circle.gfs
+# Version: 100325
+# Required files: res-7.ref error.ref order.ref
+# Generated files: residual.eps rate.eps error.eps order.eps
+#
+1 0 GfsPoisson GfsBox GfsGEdge {} {
+  Time { iend = 1 }
+  Refine (x*x + y*y <= 0.25*0.25 ? LEVEL + 2 : LEVEL)
+
+  GModule hypre
+  ApproxProjectionParams { tolerance = 1e-30 nitermin = CYCLE nitermax = CYCLE }
+
+  Init {} {
+    Div = {
+      int k = 3, l = 3;
+      return -M_PI*M_PI*(k*k + l*l)*sin (M_PI*k*x)*sin (M_PI*l*y);
+    }
+  }
+  OutputTime { istep = 1 } {
+    awk '{if ($2 == 1) print CYCLE, $8;}' >> time
+  }
+  OutputProjectionStats { start = end } {
+    awk '{if ($1 == "residual.infty:") print CYCLE, $3, $4;}' >> proj
+  }
+  OutputErrorNorm { start = end } {
+    awk '{print LEVEL, $5, $7, $9}' >> error 
+  } { v = P } {
+    s = (sin (M_PI*3.*x)*sin (M_PI*3.*y))
+    unbiased = 1
+  }
+  OutputSimulation { start = end } end-SOLVER.gfs
+}
+GfsBox {
+   left =   Boundary { BcNeumann P (- 3.*M_PI*cos(M_PI*3.*x)*sin (M_PI*3.*y)) }
+   right =  Boundary { BcNeumann P (  3.*M_PI*cos(M_PI*3.*x)*sin (M_PI*3.*y)) }
+   top =    Boundary { BcNeumann P (  3.*M_PI*cos(M_PI*3.*y)*sin (M_PI*3.*x)) }
+   bottom = Boundary { BcNeumann P (- 3.*M_PI*cos(M_PI*3.*y)*sin (M_PI*3.*x)) }
+}

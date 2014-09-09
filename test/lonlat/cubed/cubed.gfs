@@ -1,0 +1,143 @@
+# Title: Circular dam break on a ``cubed sphere''
+#
+# Description:
+#
+# Same test case but using a ``cubed sphere'' metric and adaptive mesh
+# refinement. There is noticeable distortion close to the cubed sphere
+# ``poles'' (Figures \ref{height}.(c) and \ref{scatter}.(c)).
+#
+# \begin{figure}[htbp]
+# \caption{\label{height}Solution to the shallow-water equations
+# computed on a ``cubed sphere'' with adaptive mesh refinement.
+# The solution is shown at times (a) $t=0.3$, (b)
+# $t=0.6$, (c) $t=0.9$, (d) $t=1.2$, and (e) $t=1.5$. The contours do
+# not appear circular because the solution has been projected down to
+# a plane.}
+# \begin{center}
+# \begin{tabular}{cc}
+# (a) \includegraphics[width=0.45\hsize]{isolines-0.3.eps} &
+# (b) \includegraphics[width=0.45\hsize]{isolines-0.6.eps} \\
+# (c) \includegraphics[width=0.45\hsize]{isolines-0.9.eps} &
+# (d) \includegraphics[width=0.45\hsize]{isolines-1.2.eps} \\
+# \multicolumn{2}{c}{(e) \includegraphics[width=0.45\hsize]{isolines-1.5.eps}}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp] 
+# \caption{\label{scatter}Scatter plot of the (radial) solution shown in Figure
+# \ref{height}. The green line is the average solution. The solution
+# is shown at times (a) $t=0.3$, (b) $t=0.6$, (c) $t=0.9$, (d)
+# $t=1.2$, and (e) $t=1.5$.}
+# \begin{center}
+# \begin{tabular}{c}
+# (a) \includegraphics[width=0.8\hsize]{p-0.3.eps} \\
+# (b) \includegraphics[width=0.8\hsize]{p-0.6.eps} \\
+# (c) \includegraphics[width=0.8\hsize]{p-0.9.eps} \\
+# (d) \includegraphics[width=0.8\hsize]{p-1.2.eps} \\
+# (e) \includegraphics[width=0.8\hsize]{p-1.5.eps}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: gerris2D -m cubed.gfs
+# Version: 120812
+# Required files: isolines.gfv
+# Running time: 5 minutes
+# Generated files: isolines-0.3.eps isolines-0.6.eps isolines-0.9.eps isolines-1.2.eps isolines-1.5.eps p-0.3.eps p-0.6.eps p-0.9.eps p-1.2.eps p-1.5.eps
+#
+Define LENGTH (150./180.*M_PI)
+
+6 12 GfsRiver GfsBox GfsGEdge {} {
+    PhysicalParams { L = 2.*M_PI/4. }
+    MetricCubed M 8
+    Refine 8
+    InitFraction P (0.2 - acos(cos(x*M_PI/180.)*cos(y*M_PI/180.)))
+    Init {} { P = 0.2 + 1.8*P/LENGTH }
+    Time { end = 1.5 }
+    AdaptGradient { istep = 1 } { cmax = 1e-2 maxlevel = 8 } P
+#    OutputTime { istep = 10 } stderr
+    GModule gfsview
+    OutputView { start = 0.3 step = 0.3 } isolines-%g.gnu { 
+	format = Gnuplot
+    } isolines.gfv
+    OutputSimulation { step = 0.3 } sim-%g.txt { variables = U,V,P format = text }
+    OutputScalarSum { istep = 1 } sp { v = P }
+#    OutputSimulation { istep = 10 } stdout
+    EventScript { start = end } {
+	status=0
+	for i in 0.3 0.6 0.9 1.2 1.5; do
+	    if awk 'BEGIN { n1 = 0; pi = 3.14159265359 }{
+              if ($1 != "#") {
+                c = cos($1*pi/180.)*cos($2*pi/180.);
+                d = atan2(sqrt(1. - c*c),c)*180./pi
+                i = int(d*2.)
+                x[i] += d
+                y[i] += $6
+                n[i]++
+                x1[n1] = d;
+                y1[n1++] = $6;
+              }
+            }END {
+              for (i = 0; i <= 180; i++)
+                if (n[i] > 0)
+                  print x[i]/n[i], y[i]/n[i], n[i];
+              sum = 0.;
+              for (i = 0; i < n1; i++) {
+                j = int(x1[i]*2.)
+                d = y1[i] - y[j]/n[j];
+                sum += d*d;
+              }
+              scatter = sqrt(sum/n1);
+              if (scatter > 0.015) {
+                print scatter > "/dev/stderr";
+                exit (1);
+              }
+            }' < sim-$i.txt > prof-$i.txt ; then :
+	    else
+		status=$GFS_STOP;
+	    fi
+
+	    gnuplot <<EOF
+set term postscript eps color lw 1 18
+set output 'isolines-$i.eps'
+set size ratio -1
+set xtics -90,30,90
+set ytics -90,30,90
+unset key
+plot [-90:90][-90:90]'isolines-$i.gnu' w l
+
+set term postscript eps color lw 2 solid 20
+set output 'p-$i.eps'
+rdist(x,y)=acos(cos(x*pi/180.)*cos(y*pi/180.))*180./pi
+cdist(x,y)=sqrt(x*x+y*y)
+set xlabel 'Angular distance (degree)'
+set ylabel 'Surface height'
+set xtics 0,22.5,90
+set ytics 0,0.25,0.75
+plot [0:90][0:0.75]'sim-$i.txt' u (rdist(\$1,\$2)):6 ps 0.25 pt 6 t '', 'prof-$i.txt' w l lw 2 t ''
+EOF
+
+	done
+	exit $status
+    }
+}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+1 2 right
+2 3 top
+3 4 right
+4 5 top
+5 6 right
+6 1 top
+1 3 top left
+3 5 top left
+5 1 top left
+2 6 bottom right
+4 2 bottom right
+6 4 bottom right

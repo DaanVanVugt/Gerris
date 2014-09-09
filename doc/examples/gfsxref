@@ -1,0 +1,101 @@
+#!/bin/sh
+
+usage()
+{
+	cat <<EOF
+Usage: gfsxref [OPTIONS] KEYWORD < input.gfs > output.html
+
+Creates cross-references for occurences of KEYWORD in input.gfs
+
+Options:
+	[--url=URL] reference URL for input.gfs
+        [--help]    displays this message and exits
+EOF
+	exit $1
+}
+
+if test $# -lt 1; then
+	usage 1 1>&2
+fi
+
+while test $# -gt 1; do
+  case "$1" in
+  -*=*) optarg=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+  *) optarg= ;;
+  esac
+
+  case $1 in
+    --url=*)
+      url=$optarg
+      ;;
+    --help)
+      usage 0 1>&2
+      ;;
+    --*)
+      usage 0 1>&2
+      ;;
+  esac
+  shift
+done
+
+title=`awk --posix -v keyword=$1 '
+BEGIN {
+  if (substr (keyword, 1, 3) == "Gfs")
+    keyword = substr (keyword, 4);
+  paren = -1;
+  n = 0;
+  last = "";
+}
+{
+  if ($1 == "#" && $2 == "Title:") {
+    title = $3;
+    for (i = 4; i <= NF; i++)
+      title = title " " $i;
+  }
+  else if ($1 != "#" && $0 ~ "(^|[[:blank:]])+(Gfs){0,1}" keyword "[[:blank:]]") {
+    if (last != "")
+      block[n++] = last;
+    last = $0;
+    paren = 0;
+    for (i = 2; i <= NF; i++) {
+      if ($i == "#")
+        break;
+      if (index ($i, "{"))
+        paren++;
+      if (index ($i, "}"))
+        paren--;
+    }
+  }
+  else if (paren > 0) {
+    last = last "\n" $0;
+    for (i = 1; i <= NF; i++) {
+      if ($i == "#")
+        break;
+      if (index ($i, "{"))
+        paren++;
+      if (index ($i, "}"))
+        paren--;
+    }
+  }
+} 
+END {
+  print title
+  if (last != "")
+      block[n++] = last;
+  for (i = 0; i < n; i++)
+    print block[i] > "xref_" i;
+}'`
+
+if test -f xref_0; then
+    cat <<EOF
+<li><a href="$url">$title</a></li>
+EOF
+
+    for file in xref_*; do
+	echo "<p>"
+	gfs-highlight --comment --bold < $file
+	echo "</p>"
+    done
+    
+    rm -f xref_*
+fi

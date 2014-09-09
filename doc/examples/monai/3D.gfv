@@ -1,0 +1,55 @@
+# GfsView 2D
+View {
+  tx = 1.2559 ty = -0.110427
+  sx = 1 sy = 1 sz = 1
+  q0 = 0.19799 q1 = -0.447281 q2 = -0.819559 q3 = 0.298433
+  fov = 6.89543
+  r = 0.3 g = 0.4 b = 0.6
+  res = 1
+  lc = 0.001
+  reactivity = 0.1
+}
+ClipPlane {
+  r = 0 g = 0 b = 0
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+} {
+  n.x = 1 n.y = 0 n.z = 0
+  pos = 1.576
+}
+Linear {
+  r = 1 g = 1 b = 1
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+} {
+  n.x = 0 n.y = 0 n.z = 1
+  pos = 0
+} Zb {
+  amin = 1
+  amax = 0 max = 0.15
+  cmap = Jet
+} Zb/2 {
+  reversed = 0
+  use_scalar = 0
+}
+Linear {
+  r = 0.41709 g = 0.801862 b = 1
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+} {
+  n.x = 0 n.y = 0 n.z = 1
+  pos = 0
+} P + Zb - 1e-3 {
+  amin = 0 min = -0.03
+  amax = 0 max = 0.05
+  cmap = Jet
+} (P + Zb - 1e-3)/2 {
+  reversed = 0
+  use_scalar = 0
+}

@@ -1,0 +1,75 @@
+# Title: Multi-layer Saint-Venant solver
+#
+# Description:
+#
+# A similar test but using the multi-layer hydrostatic Saint-Venant
+# solver.
+#
+# Figure \ref{uprof} illustrates the velocity profile at the center of
+# the lake and Figure \ref{error} the rate of convergence with an
+# increasing number of layers.
+#
+# \begin{figure}[htbp]
+# \caption{\label{uprof}Numerical and analytical velocity profiles at
+# the center of the lake.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{uprof.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{error}Convergence of the error between the numerical
+# and analytical solution with the number of layers.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh river.sh
+# Version: 120717
+# Running time: 15 seconds
+# Required files: river.sh error.ref
+# Generated files: uprof.eps error.eps
+#
+1 0 GfsRiver GfsBox GfsGEdge {} {
+    Layers NL
+    PhysicalParams { L = RATIO g = 100./RE }
+    Refine LEVEL
+    InitMask {} (y < RATIO*(0.5 - 1./pow(2,LEVEL)))
+
+    Init {} { P = 1 }
+    Time { end = 1000 }
+    EventStop { step = 1 } U0 1e-9
+#    OutputTime { step = 1 } stderr
+#    OutputSimulation { start = end } end-RATIO-RE.txt { format = text }
+#    OutputSimulation { start = end } end-RATIO-RE.gfs
+    OutputSimulation { start = end } {
+	awk '{
+  	  nl = NL;
+          if ($1 == "#") {
+            for (i = 2; i <= NF; i++) {
+              split($i,a,":")
+              if (a[2] == "U0")
+                start = a[1];
+            }
+          }
+          else if ($1 == RATIO/2**(LEVEL + 1)) {
+            dz = $4/nl;
+  	    for (i = 0; i < nl; i++) {
+              z = dz*(0.5+i)
+              print $1,$2,z,$(start+i)/dz
+            }
+          }
+        }' > uprof-RATIO-RE-NL
+    } { format = text }
+} {
+    # vertical viscosity
+    nu = 1./RE
+    # Neumann condition at the surface
+    dut = 1.
+}
+GfsBox {
+    right = Boundary
+    left = Boundary
+}

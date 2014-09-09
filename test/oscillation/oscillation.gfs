@@ -1,0 +1,120 @@
+# Title: Shape oscillation of an inviscid droplet
+#
+# Description:
+#
+# A two-dimensional elliptical droplet (density ratio 1/1000) is
+# released in a large domain. Under the effect of surface-tension the
+# shape of the droplet oscillates around its (circular) equilibrium
+# shape. The fluids inside and outside the droplet are inviscid so
+# ideally no damping of the oscillations should occur. As illustrated
+# on Figure \ref{kinetic} some damping occurs in the simulation due to
+# numerical dissipation.
+#
+# This simulation is also a stringent test case of the accuracy of the
+# surface tension representation as no explicit viscosity can damp
+# eventual parasitic currents.
+#
+# \begin{figure}[htbp]
+# \caption{\label{kinetic}Evolution of the kinetic energy as a function
+# of time for the spatial resolutions indicated in the legend. The
+# black lines are fitted decreasing exponential functions.}
+# \begin{center}
+# \includegraphics[width=0.9\hsize]{k.eps}
+# \end{center}
+# \end{figure}
+#
+# The initial shape of the droplet is given by:
+# $$r(\theta) = r_0 + \alpha\cos(n\theta)$$
+# The oscillation frequency is then \cite{torres00}:
+# $$\omega_n^2={(n^3-n)\sigma\over (\rho_d+\rho_e)r_0^3}$$
+#
+# A comparison between the theoretical and numerical values of the
+# frequency is given in Figure \ref{frequency}.
+#
+# \begin{figure}[htbp]
+# \caption{\label{frequency}Relative error in the oscillation
+# frequency as a function of resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{frequency.eps}
+# \end{center}
+# \end{figure}
+#
+# The amount of numerical damping can be estimated by computing an
+# equivalent viscosity. With viscosity, kinetic energy is expected to
+# decrease as:
+# $$\exp(-C\nu/D^2t)$$
+# where $C$ is a constant, $\nu$ the viscosity and $D$ the droplet
+# diameter. Using curve fitting the damping coefficient $b=C\nu/D^2$
+# can be estimated (black curves on Figure \ref{kinetic}). An
+# equivalent Laplace number can then be computed as:
+# $$La={\sigma D\over \rho\nu^2}={\sigma C^2 \over \rho b^2 D^3}$$
+# The equivalent Laplace number depends on spatial resolution as
+# illustrated in Figure \ref{laplace}.
+#
+# \begin{figure}[htbp]
+# \caption{\label{laplace}Equivalent Laplace number estimated from the
+# numerical damping of kinetic energy.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{laplace.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh oscillation.sh
+# Version: 1.2.0
+# Required files: oscillation.sh fit.ref
+# Running time: 3 minutes
+# Generated files: frequency.eps k.eps laplace.eps
+#
+Define EPSILON 0.05
+Define VAR(T,min,max)   (min + CLAMP(T,0,1)*(max - min))
+Define RHO(T)            VAR(T, 1., 1e-3)
+Define RADIUS(x,y)      (DIAMETER/2.*(1. + EPSILON*cos (2.*atan2 (y, x))))
+
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+    Time { end = 1 }
+
+    Refine LEVEL
+ 
+    VariableTracerVOFHeight T
+    VariableFiltered T1 T 1
+    InitFraction T ({ x += 0.5; y += 0.5; return x*x + y*y - RADIUS(x,y)*RADIUS(x,y); })
+
+    PhysicalParams { alpha = 1./RHO(T1) }
+    VariableCurvature K T
+    SourceTension T 1. K
+
+    AdaptFunction { istep = 1 } {
+        cmax = 0.01
+        maxlevel = LEVEL
+    } (T > 0 && T < 1 ? 1. : fabs (Vorticity)*dL)
+
+    OutputScalarSum { istep = 1 } k-LEVEL {
+        v = RHO(T1)*Velocity2
+    }
+
+    EventScript { start = end } {
+        cat <<EOF | gnuplot 2>&1 | awk '{if ($1 == "result:") print LEVEL,$2,$3,$4,$5;}'
+           k(t)=a*exp(-b*t)*(1.-cos(c*t))
+           a = 3e-4
+           b = 1.5
+  
+           D = DIAMETER
+           n = 2.
+           sigma = 1.
+           rhol = 1.
+           rhog = 1./1000.
+           r0 = D/2.
+           omega0 = sqrt((n**3-n)*sigma/((rhol+rhog)*r0**3))
+
+           c = 2.*omega0
+           fit k(x) 'k-LEVEL' u 3:5 via a,b,c
+           print "result: ", a, b, c, D
+EOF
+        rm -f fit.log
+    }
+}
+GfsBox {
+    left = Boundary
+    bottom = Boundary
+}

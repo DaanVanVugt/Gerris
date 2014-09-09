@@ -1,0 +1,112 @@
+# Title: Transcritical flow with multiple layers
+#
+# Description:
+#
+# This is meant to replicate the multilayer test case of
+# \cite{audusse2008,audusse2011}. The vertical viscosity is set to
+# $\nu=0.01$ m$^2$/s and the Navier condition at the bottom is given
+# by the Strickler relation 
+# $$k(h,{\bf U})={g\over S^2h^{1/3}}||{\bf U}||$$
+# with $S=25$ m$^{1/3}$/s, the Strickler coefficient, $h$ the
+# water depth and ${\bf U}$ the depth-averaged velocity.
+#
+# The stationary solutions are summarised in the figures below. They
+# can be compared to Figure 9 of \cite{audusse2011} and Figure 8 of
+# \cite{audusse2008}. They agree more or less although our Strickler
+# coefficient is lower (i.e. we need a larger explicit friction to
+# match \cite{audusse2008,audusse2011}).
+#
+# \begin{figure}[htbp]
+# \caption{Free surface and topograghy.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{prof.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{Horizontal velocity field (15 layers).}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{u.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{Velocity profiles at (a) $x=10$, (b) $x=15$, (c) $x=20$.}
+# \begin{center}
+# \begin{tabular}{cc}
+# (a) \includegraphics[width=0.5\hsize]{uprof-10.eps} &
+# (b) \includegraphics[width=0.5\hsize]{uprof-15.eps} \\
+# \multicolumn{2}{c}{(c) \includegraphics[width=0.5\hsize]{uprof-20.eps}}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh layered.sh
+# Version: 120717
+# Running time: 2 minutes
+# Required files: layered.sh uprof.awk field.awk prof.ref
+# Generated files: prof.eps u.eps uprof-10.eps uprof-15.eps uprof-20.eps
+#
+1 0 GfsRiver GfsBox GfsGEdge { x = 0.5 } {
+    Global {
+	#define LENGTH 21.
+	#define WIDTH 5.75
+	#define HEIGHT 0.2
+	#define Q 1.
+	#define HE 0.6
+	#define G 9.81
+    }
+    Layers NL
+    PhysicalParams { L = LENGTH g = G }
+    Refine LEVEL
+    InitMask {} (y < LENGTH*(0.5 - 1./pow(2,LEVEL)))
+    Init {} {
+	Zb = MAX(0., HEIGHT*(1. - 1./(WIDTH/2.)/(WIDTH/2.)*(x - 10.)*(x - 10.)))
+	P = 0.6 - Zb
+    }
+    AdvectionParams { 
+	# Sweby seems to oscillate in this case
+#	gradient = gfs_center_sweby_gradient 
+    }
+    # Stop when stationary solution is reached
+    EventStop { step = 1 } H 1e-3
+    Time { end = 1000 }
+    # uncomment this for on-the-fly animation
+    # OutputSimulation { step = 0.1 } {
+    # 	gfsplot "
+    #       set term wxt noraise
+    #       set xlabel 'x'
+    #       set ylabel 'z'
+    #       set xrange [0:21]
+    #       set xtics 0,2,20
+    #       set key bottom right
+    #       plot '-' u (x):(Zb) t 'topography' w l, \
+    #            '-' u (x):(H) w p t 'free surface'
+    #     "
+    # } { format = text }
+    OutputLocation { start = end } { awk -v nl=NL -f uprof.awk > uprof-10-LEVEL-NL } 10. 10.49 0
+    OutputLocation { start = end } { awk -v nl=NL -f uprof.awk > uprof-15-LEVEL-NL } 15. 10.49 0
+    OutputLocation { start = end } { awk -v nl=NL -f uprof.awk > uprof-20-LEVEL-NL } 20. 10.49 0
+    OutputSimulation { start = end } {
+	awk '{ if ($1 != "#") print $1,$8; }' > prof-LEVEL-NL
+    } { format = text }
+    OutputSimulation { start = end } end-LEVEL-NL { format = text }
+} {
+    # vertical viscosity
+    nu = 0.01
+    # Gauckler-Manning-Strickler bottom friction, G = 9.81 m/s^2,
+    # Strickler coefficient S = 25 m^(1/3)/s.
+    k = (G/(25.*25.*pow(P,1./3.)))*Velocity
+}
+GfsBox {
+    right = Boundary {
+	# set water depth at outlet
+	BcDirichlet P HE
+	BcNeumann U 0
+    }
+    left = Boundary {
+	# set flow rate at inlet, evenly distributed over all layers
+	BcDirichlet U Q/NL
+    }
+}

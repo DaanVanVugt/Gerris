@@ -1,0 +1,21 @@
+# GfsView 2D
+View {
+  tx = -1.10519 ty = -0.502068
+  sx = 1 sy = 1 sz = 1
+  q0 = 0 q1 = 0 q2 = 0 q3 = 1
+  fov = 9.96845
+  r = 0.3 g = 0.4 b = 0.6
+  res = 1
+  lc = 0.001
+  reactivity = 0.1
+}
+Location {
+  r = 0 g = 0 b = 0
+  shading = Constant
+  maxlevel = 5
+  font_size = 2
+  raster_font = 1
+} {
+  size = 0.6
+  label = 1
+}

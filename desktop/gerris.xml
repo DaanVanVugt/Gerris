@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/gerris">
+    <sub-class-of type="text/plain"/>
+    <comment xml:lang="en">Gerris simulation</comment>
+    <glob pattern="*.gfs"/>
+  </mime-type>
+  <mime-type type="application/gerris-compressed">
+    <sub-class-of type="application/x-gzip"/>
+    <comment xml:lang="en">Gerris simulation</comment>
+    <glob pattern="*.gfs.gz"/>
+  </mime-type>
+  <mime-type type="application/gerris-2D">
+    <sub-class-of type="application/gerris"/>
+    <comment xml:lang="en">Gerris 2D simulation</comment>
+    <magic priority="80">
+      <match type="string" value="# Gerris Flow Solver 2D " offset="0"/>
+    </magic>
+  </mime-type>
+  <mime-type type="application/gerris-3D">
+    <sub-class-of type="application/gerris"/>
+    <comment xml:lang="en">Gerris 3D simulation</comment>
+    <magic priority="80">
+      <match type="string" value="# Gerris Flow Solver 3D " offset="0"/>
+    </magic>
+  </mime-type>
+</mime-info>

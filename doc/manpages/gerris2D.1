@@ -1,0 +1,53 @@
+.TH gerris 1 "July 9, 2008" "" "User Commands"
+
+.SH NAME
+gerris2D, gerris3D \- the Gerris flow solver simulation engine.
+
+.SH SYNOPSIS
+.B gerris
+.RI [OPTION] FILE
+.SH DESCRIPTION
+This manual page documents briefly the
+.B gerris
+command.
+
+.SH OPTIONS
+These programs follow the usual GNU command line syntax, with long
+options starting with two dashes (`-').
+A summary of options is included below.
+.TP
+.B \-s N, \-\-split=N
+Splits the domain N times and returns the corresponding simulation.
+.TP
+.B \-i, \-\-pid
+Keep box pids when splitting. The default is to allocate one pid per box.
+.TP
+.B \-P N, \-\-partition=N
+Partition the domain in 2^N subdomains and returns the corresponding simulation.
+.TP
+.B \-d, \-\-data
+When splitting or partitioning, output all data.
+.TP
+.B \-P, \-\-profile
+Profiles calls to boundary conditions.
+.TP
+.B \-m, \-\-macros
+Turn macros support on.
+.TP
+.B \-DNAME, \-DNAME=VALUE, \-\-define=NAME, \-\-define=NAME=VALUE
+Defines NAME as a macro expanding to VALUE (macro support is implicitly turned on).
+.TP
+.B \-eEV, \-\-event=EV
+Evaluates the GfsEvent EV and returns the simulation.
+.TP
+.B \-V, \-\-version
+Output version information and exit.
+.TP
+.B \-h, \-\-help
+Display the help and exit.
+
+.SH AUTHOR
+gerris was written by Stephane Popinet <s.popinet@niwa.co.nz>.
+.PP
+This manual page was written by Ruben Molina <rmolina@udea.edu.co>,
+for the Debian project (but may be used by others).

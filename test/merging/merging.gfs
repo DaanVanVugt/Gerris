@@ -1,0 +1,153 @@
+# Title: Convergence for the three-way vortex merging problem
+#
+# Description:
+#
+# Another of the test cases presented in Popinet \cite{popinet2003},
+# initially used by Almgren et al. \cite{almgren98}, this convergence
+# test illustrates the second-order accuracy of Gerris when refinement
+# is placed appropriately, either through static refinement or dynamic
+# adaptive refinement.
+#
+# Four vortices are placed in the unit-square, centred at $(0,0)$,
+# $(0.09,0)$, $(-0.045,0.045\sqrt{3})$ and $(-0.045,$ $-0.045\sqrt{3})$
+# and of strengths $-150$, $50$, $50$, $50$ respectively. The profile of
+# each vortex centred around $(x_i,y_i)$ is
+# $$
+# {1+\tanh(100(0.03-r_i))\over 2},
+# $$
+# where $r_i=\sqrt{(x-x_i)^2+(y-y_i)^2}$. To initialise the velocity
+# field, we use this vorticity as the source term in the Poisson
+# equation for the streamfunction $\psi$
+# $$
+# \nabla^2\psi=\|\nabla\times{\bf U}\|.
+# $$
+# Each component of the velocity field is then calculated from the
+# streamfunction. No-flow boundary conditions are used on the four sides
+# of the domain and the simulations are ran to $t=0.25$ using a CFL of
+# 0.9.
+#
+# Two different discretisations are used, each time with up to $L$
+# levels of refinement: a grid using static refinement in concentric
+# circles of decreasing radius and a grid using dynamic adaptive
+# refinement. The ``circle'' grid is constructed by starting from a
+# uniform grid with four levels of refinement and by successively adding
+# one level to all the cells contained within circles centred on the
+# origin and of radii:
+# \begin{itemize}
+# \item $L=6$: 0.25, 0.15
+# \item $L=7$: 0.25, 0.2, 0.15
+# \item $L=8$: 0.25, 0.2, 0.175, 0.15
+# \item $L=9$: 0.25, 0.2, 0.175, 0.1625, 0.15
+# \end{itemize}
+# For the dynamically refined grid, the vorticity-based criterion is
+# applied at every timestep with a threshold $\tau=4\times10^{-3}$. As
+# we do not have an analytical solution for this problem, Richardson
+# extrapolation is used.
+#
+# Figure \ref{vorticity} illustrates the evolution of the vorticity
+# and of the adaptively refined grid for $L=8$. The most refined level
+# closely follows the three outer vortices as they orbit the central
+# one. Far from the vortices, a very coarse mesh is used ($l=3$). One
+# may note a few isolated patches of refinement scattered at the
+# periphery of the outer vortices. They are due to the numerical noise
+# added to the vorticity by the interpolation procedure necessary to
+# fill in velocity values for newly created cells. This could be
+# improved by using higher-order interpolants.
+#
+# Table \ref{convergence} summarises the results obtained for the
+# first twelve calculations. For fine enough grids close to
+# second-order convergence is obtained for both norms and for the two
+# discretisations used. The norms of the error on the various grids
+# are also comparable for a given resolution.
+#
+# \begin{table}
+# \caption{\label{convergence}Errors and convergence orders in the $x$-component of the
+# velocity for the four-way vortex merging problem. The reference
+# solution values are given in blue.}
+# \begin{center}
+# \input{convergence.tex}
+# \end{center}
+# \end{table}
+#
+# \begin{figure}
+# \caption{\label{vorticity}Contour plots of vorticity (left) and adaptive grids used
+# (right) for the four-way vortex merging calculation.}
+# \begin{center}
+# \begin{tabular}{cc}
+# \includegraphics*[width=0.3\hsize]{tv_0_05.eps} &
+# \includegraphics*[width=0.3\hsize]{tm_0_05.eps} \\
+# \multicolumn{2}{c}{$t=0.05$} \\
+# \\
+# \includegraphics*[width=0.3\hsize]{tv_0_15.eps} &
+# \includegraphics*[width=0.3\hsize]{tm_0_15.eps} \\
+# \multicolumn{2}{c}{$t=0.15$} \\
+# \\
+# \includegraphics*[width=0.3\hsize]{tv_0_25.eps} &
+# \includegraphics*[width=0.3\hsize]{tm_0_25.eps} \\
+# \multicolumn{2}{c}{$t=0.25$}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh merging.sh merging.gfs
+# Version: 0.6.4
+# Required files: merging.sh levels.gfv vorticity.gfv sim.err.ref simc.err.ref
+# Running time: 3 minutes
+# Generated files: convergence.tex tv_0_05.eps tm_0_05.eps tv_0_15.eps tm_0_15.eps tv_0_25.eps tm_0_25.eps
+#
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+  Time { end = 0.25 }
+  AdvectionParams { cfl = 0.9 }
+  ApproxProjectionParams { tolerance = 1e-5 }
+  ProjectionParams { tolerance = 1e-5 }
+  Refine {
+    double r = sqrt(x*x + y*y);
+    switch (LEVEL) {
+    case 6: return r > 0.25 ? 4 : r > 0.15 ? 5 : 6;
+    case 7: return r > 0.25 ? 4 : r > 0.2 ? 5 : r > 0.15 ? 6 : 7;
+    case 8: return r > 0.25 ? 4 : r > 0.2 ? 5 : r > 0.175 ? 6 : r > 0.15 ? 7 : 8;
+    case 9: return r > 0.25 ? 4 : r > 0.2 ? 5 : r > 0.175 ? 6 : r > 0.1625 ? 7 : r > 0.15 ? 8 : 9;
+    }
+  }
+  InitVorticity {} {
+    double vortex (double xo, double yo, double s) {
+      double r = sqrt ((x - xo)*(x - xo) + (y - yo)*(y - yo));
+      return s*(1. + tanh (100.*(0.03 - r)))/2.;
+    }
+    return vortex (0., 0., -150.) + 
+           vortex (0.09, 0., 50.) + 
+           vortex (-0.045, 0.0779422863406, 50.) +
+           vortex (-0.045, -0.0779422863406, 50.);
+  }
+  AdaptVorticity { istep = 1 } { maxlevel = LEVEL cmax = 4e-3 }
+  OutputSimulation { start = 0.05 } stdout
+  EventScript { start = 0.05 } {
+    echo Clear
+    cat levels.gfv
+    echo Save tm_0_05.eps { format = EPS line_width = 0.1 }
+    echo Clear
+    cat vorticity.gfv
+    echo Save tv_0_05.eps { format = EPS line_width = 0.1 }
+  }
+  OutputSimulation { start = 0.15 } stdout
+  EventScript { start = 0.15 } {
+    echo Clear
+    cat levels.gfv
+    echo Save tm_0_15.eps { format = EPS line_width = 0.1 }
+    echo Clear
+    cat vorticity.gfv
+    echo Save tv_0_15.eps { format = EPS line_width = 0.1 }
+  }
+  OutputSimulation { start = 0.25 } stdout
+  EventScript { start = 0.25 } {
+    echo Clear
+    cat levels.gfv
+    echo Save tm_0_25.eps { format = EPS line_width = 0.1 }
+    echo Clear
+    cat vorticity.gfv
+    echo Save tv_0_25.eps { format = EPS line_width = 0.1 }
+  }
+  OutputSimulation { start = 0.25 } SIM
+}
+GfsBox {}

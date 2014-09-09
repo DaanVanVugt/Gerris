@@ -1,0 +1,54 @@
+# Title: Poiseuille flow with metric
+#
+# Description:
+#
+# A simple Poiseuille flow but using a non-uniformly-stretch metric
+# across the channel.
+# Figure \ref{convergence} illustrates the norms of the error between
+# the computed and theoretical solutions as functions of spatial
+# resolution.
+#
+# \begin{figure}[htbp]
+# \caption{\label{convergence}Convergence of the error norms as functions
+# of resolution (number of grid points across the channel).}
+# \begin{center}
+# \includegraphics[width=\hsize]{convergence.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh ../poiseuille.sh metric.gfs
+# Version: 111025
+# Required files: error.ref
+# Generated files: convergence.eps
+#
+1 1 GfsSimulation GfsBox GfsGEdge {} {
+    # use a non-uniformly-stretched metric in the y-direction
+    # the grid points are denser close to the wall
+    Metric M {
+	y = tanh(4.*ry)/tanh(4./2.)/2.
+    }
+    
+    Refine LEVEL
+    # use backward Euler to avoid Crank-Nicholson oscillations in time
+    SourceViscosity 1. { beta = 1 }
+    Source U 1
+    # add a transverse source term to also test hydrostatic balance
+    Source V 1
+
+    EventStop { istep = 1 } U 1e-6 DU
+    ProjectionParams { tolerance = 1e-6 }
+    ApproxProjectionParams { tolerance = 1e-6 }
+    OutputErrorNorm { start = end } { awk '{print LEVEL,$5,$7,$9}' } { v = U } { 
+        s = 1./2.*(1./4 - y*y) 
+    }
+}
+GfsBox {
+    bottom = Boundary {
+        BcDirichlet U 0 
+    }
+    top = Boundary {
+        BcDirichlet U 0 
+    }
+}
+1 1 right

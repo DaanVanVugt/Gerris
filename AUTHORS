@@ -1,0 +1,19 @@
+Original Authors
+----------------
+Stéphane Popinet   <popinet@users.sf.net>
+Sébastien Delaux   <s.delaux@niwa.co.nz> : Moving solid boundaries
+Gaurav Tomar       <gaurav.tomar03@gmail.com> : particulates module
+Andris Rudzītis    <andrisrudzitis@gmail.com> : df3 povray module
+Jose M. López-Herrera Sánchez <jose.lopez.herrera.s@gmail.com> : electrohydro module
+Kristján Gudmundsson <kristjang@gmail.com> : GfsSpatialSum
+
+Contributors
+------------
+Marcelo E. Magallon, Ruben Molina, Drew Parsons: Debian packages
+Ruben Scardovelli: - author of the Fortran version of gfs_plane_alpha()
+      		   - Mixed Youngs-Centered VOF normal calculation
+Ivan Adam Vari, Matthieu Castellazzi: RPM packages.
+Daniel Fuster: gfsjoin script
+Rohallah Tavakoli: initial implementation of VTK and Tecplot output
+Norbert Beckmann: R*-tree implementation used in the terrain module
+Thierry Letellier, Laurent Roblou: FES2004 tidal atlas library

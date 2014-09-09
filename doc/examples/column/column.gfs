@@ -1,0 +1,251 @@
+# Title: Collapse of a column of grains
+#
+# Description:
+#
+# Granular materials such as sand, rice, rocks etc... often exhibit
+# ``fluid-like'' collective behaviour. It is thus tempting to try to
+# describe the motion of granular matter using equations similar to
+# those used to describe fluid motion (e.g. the Navier-Stokes
+# equations).
+# Things are not that simple however. The dissipative properties of
+# granular matter are in particular quite different from those of
+# simple fluids (i.e. Newtonian fluids which are characterised by a
+# constant viscosity coefficient).
+#
+# The search for constitutive equations (i.e. rheologies) able to
+# describe flowing granular matter has been unsucessful for many
+# years, so that the modelling of even simple granular flows (e.g. the
+# flow of sand in an hourglass) was impossible up until very recently.
+# In this example, we show how the recently proposed $\mu(I)$ rheology
+# is able to describe very satisfactorily a complex granular flow: the
+# collapse under its own weight of a column of grains. The aspect
+# ratio of the column $a$ is an important parameter and is set to 6.26
+# for this particular example. The animation in Figure \ref{movie}
+# illustrates the evolution of the shape of the column as it collapses
+# and spreads onto the horizontal surface (in black). The red line is
+# a passive internal tracer which helps to visualise the deformation
+# of the bulk.
+#
+# Figure \ref{comparison} compares the results of the continuum
+# $\mu(I)$ model with a Contact Dynamics simulation \cite{staron2005}
+# where the motion of individual grains is computed explicitly. The
+# shapes of both the surface and bulk deformations are very well
+# captured by the continuum model.
+#
+# A detailed analysis of this example is given in \cite{lagree2011}.
+#
+# \begin{figure}[htbp]
+# \caption{\label{movie}Evolution of the outer (black) and inner (red)
+# shape of the granular column.}
+# \begin{center}
+# \video{column/movie}{640}{240}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{comparison}Comparison between the $\mu(I)$ continuum
+# model (red line) and discrete simulation (grains). $a=6.26$,
+# $\mu_s=0.32$, $\Delta\mu=0.28$, $I_0=0.4$. The non-dimensional time
+# is $t_\star=t\sqrt{g/H_0}$, with $g$ the acceleration of gravity and
+# $H_0$ the initial height of the column.}
+# \begin{center}
+# \begin{tabular}{cc}
+# \includegraphics[width=0.45\hsize]{comparison-0.eps} &
+# \includegraphics[width=0.45\hsize]{comparison-0.66.eps} \\
+# $t_\star=0$ & $t_\star=0.66$ \\
+# \includegraphics[width=0.45\hsize]{comparison-0.95.eps} &
+# \includegraphics[width=0.45\hsize]{comparison-1.24.eps} \\
+# $t_\star=0.95$ & $t_\star=1.24$ \\
+# \multicolumn{2}{c}{\includegraphics[width=0.9\hsize]{comparison-1.52.eps}} \\
+# \multicolumn{2}{c}{$t_\star=1.52$} \\
+# \multicolumn{2}{c}{\includegraphics[width=0.9\hsize]{comparison-2.28.eps}} \\
+# \multicolumn{2}{c}{$t_\star=2.28$}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet, Pierre-Yves Lagr\'ee, Lydie Staron
+# Command: gerris2D -m column.gfs | gfsview2D movie.gfv
+# Version: 110104
+# Required files: comparison.plot column.gfv grains.tgz movie.gfv
+# Running time: 10 minutes
+# Generated files: comparison-0.eps comparison-0.66.eps comparison-0.95.eps comparison-1.24.eps comparison-1.52.eps comparison-2.28.eps movie.eps movie.ogv
+
+# Grain size
+Define D 0.04623
+
+# Density
+Define RHOF 0.001
+Define RHO(T) (T + RHOF*(1. - T))
+
+# Viscosity of light phase
+Define MUF 0.0001
+
+# Domain extent
+Define LDOMAIN 32.
+
+# Initial conditions
+Define H0 6.26
+Define R0 1.
+
+# Maximum refinement
+Define LEVEL 10
+
+1 0 GfsSimulation GfsBox GfsGEdge { 
+    # shift origin of the domain
+    x = 0.5 y = 0.5 
+} {
+    PhysicalParams { L = LDOMAIN }
+
+    Time { end = 5.8 dtmax = 1e-2 }
+
+    # We need to tune the solver
+    ApproxProjectionParams { tolerance = 1e-4 }
+    ProjectionParams { tolerance = 1e-4 }
+
+    # VOF tracer and interface positions
+    VariableTracerVOF T
+    VariablePosition X T x
+    VariablePosition Y T y
+
+    # "internal" tracer
+    VariableTracerVOF Ti
+    InitFraction Ti ({
+	    double diametre = 5e-3;
+	    double r0 = 0.677/6.26;
+	    double centre = x - 4.*diametre/r0;
+	    double top = y - H0 + 9.*diametre/r0;
+	    double side = x - R0 + 5.*diametre/r0;
+	    return union (union (-top, -side), centre);
+    })
+
+    # mu(I) granular rheology
+    SourceViscosity {} {
+	double Eta = MUF;
+	if (P > 0. && D2 > 0.) {
+	   double In = sqrt(2.)*D*D2/sqrt(P);
+	   double muI = .32 + (.28)*In/(.4 + In);
+	   double Etamin = sqrt(pow(D,3));
+	   Eta = MAX((muI*P)/(sqrt(2.)*D2), Etamin);
+	   Eta = MIN(Eta,10);
+	}
+	// Classic trick: use harmonic mean for the dynamic viscosity
+	return 1./(T/Eta + (1. - T)/MUF);
+    } {
+	beta = 1 
+	tolerance = 1e-4
+    }
+
+    # Track a "band" around the interface to resolve surface gradients
+    # properly
+    AdaptGradient { istep = 1 } {
+	cmax = 0
+	maxlevel = LEVEL
+    } T
+
+    # Use constant resolution inside the granular material
+    AdaptFunction { istep = 1 } {
+	cmax = 0
+	maxlevel = LEVEL
+    } T
+
+    # density
+    PhysicalParams { alpha = 1./RHO(T) }
+
+    # gravity
+    Source V -1
+
+    # initial conditions
+    Refine 6
+    InitFraction T (union(H0 - y, R0 - x))
+
+    OutputTime { istep = 10 } stderr
+    OutputProjectionStats { istep = 10 } stderr
+    OutputDiffusionStats { istep = 10 } stderr
+
+    EventSum { istep = 1 } U SU
+    EventSum { istep = 1 } V SV
+
+    # remove ejected droplets (just in case)
+    RemoveDroplets { istep = 1 } T -1
+
+    # stop when the acceleration of any cell full of granular material
+    # is less than 1e-2/0.1
+    # Init { istep = 1 } { UT = U*(T == 1.) }
+    # EventStop { start = 0.1 step = 0.1 } UT 1e-2 DU
+    # OutputScalarNorm { istep = 10 } du-LEVEL { v = DU }
+
+    # check mass conservation
+    OutputScalarSum { istep = 10 } t-LEVEL { v = T }
+
+    OutputSimulation { istep = 10 } stdout
+
+    # generate profiles
+    OutputSimulation { start = 0 } snapshot-%g.gfs
+    OutputSimulation { start = 1.65132 } snapshot-%g.gfs
+    OutputSimulation { start = 2.3769 } snapshot-%g.gfs
+    OutputSimulation { start = 3.10248 } snapshot-%g.gfs
+    OutputSimulation { start = 3.80304 } snapshot-%g.gfs
+    OutputSimulation { start = 5.70456 } snapshot-%g.gfs
+
+    # interface positions
+    OutputScalarNorm { istep = 10 } X-H0-LEVEL { v = (T > 0.1 ? X : G_MAXDOUBLE) }
+    OutputScalarNorm { istep = 10 } Y-H0-LEVEL { v = (T > 0.1 ? Y : G_MAXDOUBLE) }
+    # position of the "center" of the column
+    OutputScalarNorm { istep = 10 } Yc-H0-LEVEL { v = (x < 0.1 ? Y : G_MAXDOUBLE) }
+
+    # center of mass
+    OutputScalarSum { istep = 10 } {
+	awk '{
+          print $3,$5/(H0*R0);
+          fflush (stdout);
+        }' > xg-H0-LEVEL
+    } { v = T*x }
+    OutputScalarSum { istep = 10 } {
+	awk '{
+          print $3,$5/(H0*R0);
+          fflush (stdout);
+        }' > yg-H0-LEVEL
+    } { v = T*y }
+
+    # movie
+    GModule gfsview
+    OutputView { step = 5e-2 } { ppm2theora -s 640x240 > movie.ogv } {
+	width = 1280 height = 480
+    } movie.gfv
+
+    # generate figures
+    EventScript { start = end } {
+	for t in 0 1.65132 2.3769 3.10248 3.80304 5.70456; do
+	    echo "Save snapshot-$t.gnu { format = Gnuplot }" | \
+     		gfsview-batch2D column.gfv snapshot-$t.gfs
+	done
+	echo "Save movie.ppm { format = PPM width = 1280 height = 480 }" | \
+	    gfsview-batch2D movie.gfv snapshot-0.gfs
+	convert movie.ppm -geometry 640x240 movie.png
+	convert movie.png movie.eps
+	rm -f movie.ppm
+	tar xzf grains.tgz
+	gnuplot comparison.plot
+    }
+}
+GfsBox {
+    top = Boundary {
+	# shift the reference pressure by the hydrostatic pressure of
+	# the light phase, i.e. P = 0 at the bottom boundary in the
+	# light phase. I am not sure whether this makes a real
+	# difference.
+	BcDirichlet P -RHOF*LDOMAIN
+	BcNeumann V 0
+    }
+    bottom = Boundary {
+	# no-slip at the bottom
+	BcDirichlet U 0
+    }
+    # lateral symmetry
+    left = Boundary
+    # no slip wall on the right-hand-side
+    right = Boundary {
+	BcDirichlet V 0
+    }
+}

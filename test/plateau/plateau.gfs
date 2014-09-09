@@ -1,0 +1,162 @@
+# Title: Scalings for Plateau--Rayleigh pinchoff
+#
+# Description:
+#
+# An inviscid cylinder of dense liquid is unstable under surface
+# tension forces. The initial growth of the perturbation is described
+# by the Rayleigh--Plateau linear stability theory. Close to pinchoff,
+# non-linear effects cannot be neglected and fully non-linear
+# solutions must be sought. Using simple similarity arguments, one can
+# predict that the minimum radius of the deformed cylinder should tend
+# toward zero as $(t_0-t)^{2/3}$ while the axial velocity should
+# diverge as $1/(t_0-t)^{1/3}$, with $t_0$ the time of pinchoff.
+#
+# This test case verifies that these scalings can be recovered using
+# an axisymmetric VOF calculation.
+#
+# Figure \ref{evolution} illustrates the initial growth, pinchoff and
+# satellite drop formation. The animation of Figure \ref{adaptivity}
+# shows how adaptivity is used to track the high curvatures and short
+# timescales close to pinchoff. Up to 14 levels of refinement are used
+# to capture roughly four orders of magnitude in characteristic
+# spatial scales.
+#
+# The scalings for the minimum radius and maximum velocity are given
+# in Figures \ref{radius} and \ref{velocity}, together with the
+# theoretical fits. The fit is excellent for at least three orders of
+# magnitude in timescale. The departures from the power laws close to
+# pinchoff are due to saturation of the spatial resolution (the
+# minimum value on the y-axis of Figure \ref{radius} is the grid size
+# $1/2^{14}$).
+#
+# See also \cite{popinet2009}, \cite{popinet2011b} and the
+# \htmladdnormallinkfoot{3D plateau example}{http://gerris.dalembert.upmc.fr/gerris/examples/examples/plateau.html}.
+#
+# \begin{figure}[htbp] 
+# \caption{\label{evolution}Interface at times. (a)
+# $t=0.2$. (b) $t=0.6$. (c) pinchoff. (d) $t=0.8$.}
+# \begin{center}
+# \begin{tabular}{c}
+# (a) \includegraphics[width=0.7\hsize]{plateau-0.2.eps} \\
+# (b) \includegraphics[width=0.7\hsize]{plateau-0.6.eps} \\
+# (c) \includegraphics[width=0.7\hsize]{plateau-t0.eps} \\
+# (d) \includegraphics[width=0.7\hsize]{plateau-0.8.eps}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp] 
+# \caption{\label{adaptivity}Animation of a closeup view of the
+# pinchoff area and adaptive mesh refinement. The colours correspond
+# to spatial resolution. Dark red is 14 levels of refinement.}
+# \begin{center}
+# \htmladdnormallinkfoot{\includegraphics[width=0.8\hsize]{zoom-t0.eps}}{plateau.mpg}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp] 
+# \caption{\label{radius}Evolution of the minimum radius.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{y.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp] 
+# \caption{\label{velocity}Evolution of the maximum axial velocity.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{u.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: gerris2D plateau.gfs
+# Version: 110927
+# Required files: plateau.gfv zoom.gfv 
+# Running time: 10 minutes
+# Generated files: plateau-0.2.eps plateau-0.6.eps plateau-t0.eps plateau-0.8.eps u.eps y.eps plateau.mpg zoom-t0.eps
+1 0 GfsAxi GfsBox GfsGEdge {} {
+   Refine 5
+   VariableTracerVOFHeight T
+   PhysicalParams { alpha = 1./(T + 1e-2*(1. - T)) }
+   VariableCurvature K T Kmax
+   VariablePosition Y T y
+   InitFraction T (0.2*(1. + 0.1*sin(M_PI*x)) - y)
+   SourceTension T 1. K
+#   SourceViscosity 1./20.*(T + 1e-2*(1. - T))
+
+   AdaptGradient { istep = 1 } { maxlevel = 6 cmax = 0 } T
+   AdaptFunction { istep = 1 } { 
+       # adapt down to 14 levels to capture breakup asymptotics and
+       # only 10 levels after breakup
+       maxlevel = (t < 0.7455 ? 14 : 10)
+       cmax = 0.2 
+   } (T > 0 && T < 1)*Kmax*dL
+
+   Time { end = 0.8 }
+
+   OutputScalarStats { istep = 1 } p { v = P }
+   # we need more precision for the time output
+   OutputScalarStats { istep = 1 } y { v = Y format = "%10.6e" }
+   OutputScalarStats { istep = 1 } k { v = K }
+   OutputBalance { istep = 1 } balance
+   OutputScalarSum { istep = 1 } ke { v = Velocity2*T }
+   OutputScalarNorm { istep = 1 } u { v = U }
+#   OutputSimulation { istep = 10 } stdout
+  
+   GModule gfsview
+   OutputView { start = 0.6 istep = 5 end = 0.7455 } { 
+       ppm2mpeg -s 640x480 > plateau.mpg 
+   } { width = 1280 height = 960 } zoom.gfv
+   OutputView { step = 0.2 } plateau-%g.eps { format = EPS } plateau.gfv
+   OutputView { start = 0.7451 } plateau-t0.eps { format = EPS } plateau.gfv
+   OutputView { start = 0.7451 } zoom-t0.eps { format = EPS } zoom.gfv
+
+   EventScript { start = end } {
+       # set t0 (breakup time) as the time for which the minimum
+       # radius is smaller than the size of the finest cell: 1/2^14
+       t0=`awk '{ if ($5 < 1./2.**14) { print $3; exit(0);} }' < y`
+       rm -f fit.log
+       gnuplot <<EOF
+       set term postscript eps lw 3 20 color enhanced
+       set key spacing 1.5
+       set grid
+       set output 'y.eps'
+       set xlabel 't_0 - t'
+       set ylabel 'r_{min}'
+       set logscale
+       fit [1e-6:1e-3] a*x**(2./3.) 'y' u ($t0 - \$3):5 via a
+       plot [1e-6:][1./2**14:]'y' u ($t0 - \$3):5 ps 0.5 t '', a*x**(2./3.) t 'x^{2/3}'
+EOF
+       status=0
+       if awk '{if ($1 == "rms" && (NF < 8 || $8 > 4e-5)) {
+                  print "rmsy: " $8 > "/dev/stderr"; exit (1); 
+               }}' < fit.log; then :
+       else
+	   status=$GFS_STOP;
+       fi
+       rm -f fit.log
+       gnuplot <<EOF
+       set term postscript eps lw 3 20 color enhanced
+       set key spacing 1.5
+       set grid
+       set output 'u.eps'
+       set xlabel 't_0 - t'
+       set ylabel 'u_{max}'
+       set logscale
+       fit [1e-6:1e-3] a*x**(-1./3.) 'u' u ($t0 - \$3):9 via a
+       plot [1e-6:]'u' u ($t0 - \$3):9 ps 0.5 t '', a*x**(-1./3.) t 'x^{-1/3}'
+EOF
+       if awk '{if ($1 == "rms" && (NF < 8 || $8 > 8.)) {
+                  print "rmsu: " $8 > "/dev/stderr"; exit (1); 
+               }}' < fit.log; then :
+       else
+	   status=$GFS_STOP;
+       fi
+       exit $status;
+   }
+}
+GfsBox {
+    bottom = Boundary
+    left = Boundary
+    right = Boundary
+}

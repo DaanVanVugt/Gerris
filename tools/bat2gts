@@ -1,0 +1,154 @@
+#!/bin/sh
+
+# reference longitude (degrees)
+rlong=174
+# reference latitude (degrees)
+rlat=-41
+# width of the domain (kilometers)
+width=500
+# coastline reference depth (m)
+coast=0.1
+# verbose output
+verbose=""
+# angle of rotation
+angle=0
+# relative error
+relative=0.05
+# reference depth
+H=5000
+
+usage()
+{
+	cat <<EOF
+Usage: bat2gts [OPTIONS] < BATHY
+
+Takes a bathymetry file (three columns: longitude, latitude (degree),
+depth (meters)) and generates a GTS depth file for the given
+domain.
+
+Options:
+	[--long=V]  set reference longitude to V (default 174 deg)
+	[--lat=V]   set reference latitude  to V (default -41 deg)
+	[--width=V] set domain width (default is 500 km)
+        [--depth=V] set reference depth to V
+                        (default is 5000 meters)
+        [--coast=V] set coastline reference depth to V
+                        (default is 0.1 meters)
+        [--rel=T]   set relative error allowed on bathymetry (default is 0.05)
+        [--angle=V] rotation of V degrees (default is 0)
+        [--verbose] display info about the process
+        [--help]    display this message and exits
+EOF
+	exit $1
+}
+
+if test $# -lt 1; then
+	usage 1 1>&2
+fi
+
+command="bat2gts $*"
+
+while test $# -gt 0; do
+  case "$1" in
+  -*=*) optarg=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+  *) optarg= ;;
+  esac
+
+  case $1 in
+    --long=*)
+      rlong=$optarg
+      ;;
+    --lat=*)
+      rlat=$optarg
+      ;;
+    --width=*)
+      width=$optarg
+      ;;
+    --depth=*)
+      H=$optarg
+      ;;
+    --coast=*)
+      coast=$optarg
+      ;;
+    --angle=*)
+      angle=$optarg;
+      ;;
+    --rel=*)
+      relative=$optarg
+      ;;
+    --verbose)
+      verbose="-v"
+      ;;
+    --help)
+      usage 0 1>&2
+      ;;
+    *)
+      usage 0 1>&2
+      ;;
+  esac
+  shift
+done
+
+proj=-Ja$rlong/$rlat/1:`echo $width | awk '{print $1*1e5}'`c
+area=-R`echo $rlong $rlat $width | awk '{
+  Pi = 3.14159265359
+  dlon = 0.71*$3/(6378.*cos ($2*Pi/180))*180./Pi
+  dlat = 0.71*$3/6378.*180./Pi
+  print $1 - dlon "/" $1 + dlon "/" $2 - dlat "/" $2 + dlat
+}'`
+
+cat <<EOF
+# Created by bat2gts
+# wdir: $PWD
+# command line: $command
+# reference depth: $H m
+EOF
+mapproject -Dc -C $proj $area |\
+  awk -v H=$H -v coast=$coast '{
+    if ($1 < 0.71 && $1 > -0.71 && $2 < 0.71 && $2 > -0.71)
+      print $1 " " $2 " " (coast - $3)/H;
+  }
+' | sort | uniq | happrox -f $verbose -r `awk -v H=$H 'BEGIN{print 1./H}'` -c $relative |\
+transform --rz $angle | transform --revert --tz 0.5
+
+cat <<EOF > lolat2xy
+gmtset D_FORMAT = %.12lf
+mapproject -Dc -C $proj $area | awk '
+BEGIN {
+  angle = $angle * 3.14159265359/180.;
+  cosa = cos (angle);
+  sina = sin (angle);
+}
+{
+  if (NF >= 2) {
+    printf ("%f %f", cosa*\$1 - sina*\$2, sina*\$1 + cosa*\$2);
+    for (i = 3; i <= NF; i++)
+      printf (" %s", \$i);
+    printf ("\n");
+  }
+  else
+    print \$0;
+}'
+EOF
+chmod +x lolat2xy
+
+cat <<EOF > xy2lolat
+gmtset D_FORMAT = %.12lf
+awk '
+BEGIN {
+  angle = - $angle * 3.14159265359/180.;
+  cosa = cos (angle);
+  sina = sin (angle);
+}
+{
+  if (NF >= 2) {
+    printf ("%f %f", cosa*\$1 - sina*\$2, sina*\$1 + cosa*\$2);
+    for (i = 3; i <= NF; i++)
+      printf (" %s", \$i);
+    printf ("\n");
+  }
+  else
+    print \$0;
+}' | mapproject -Dc -I -C $proj $area
+EOF
+chmod +x xy2lolat

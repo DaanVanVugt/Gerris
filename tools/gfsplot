@@ -1,0 +1,64 @@
+#!/bin/sh
+
+awk -v header="$1" -v plottmp=`mktemp` '
+BEGIN {
+  np = 0
+  plot=""
+  quote = sprintf("%c", 39)
+  input = sprintf("%c-%c", 39, 39)
+  print "set terminal wxt noraise"
+}
+{
+  if ($1 == "#" && $2 == "1:x") {
+    # Simulation plot
+    if (plot) {
+      # finish plot
+      fflush(current)
+      print plot
+      print "! rm -f " current
+      fflush()
+    }
+    else {
+      # initial setup
+      ns = 0
+      for (i = 2; i < NF; i++) {
+        split($i,a,":")
+        number[ns] = a[1]
+        symbol[ns++] = a[2]
+      }
+      for (i in symbol)
+        gsub ("\\(" symbol[i] "\\)", "($" number[i] ")", header);
+    }
+    if (header) {
+      # new simulation plot
+      current = plottmp np++
+      plot = header
+      gsub (input, quote current quote, plot)
+      gsub ("\\(t\\)", $(NF), plot)
+    }
+  }
+  else if ($2 == "time:") {
+    # timeseries plot
+    print $0 >> plottmp
+    fflush(plottmp)
+    if (plot) {
+      print plot
+      fflush()
+    }
+    else if (header) {
+      plot = header
+      gsub (input, quote plottmp quote, plot)
+    }
+  }
+  else if (plot)
+    print $0 >> current;
+}
+END {
+  if (current) {
+    # finish simulation plot
+    fflush (current)
+    print plot
+    print "! rm -f " current
+  }
+  print "! rm -f " plottmp
+}' | gnuplot

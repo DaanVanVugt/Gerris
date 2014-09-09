@@ -1,0 +1,121 @@
+# Title: Spherical harmonics with longitude-latitude coordinates
+#
+# Description:
+#
+# Same test case but using longitude-latitude spherical coordinates.
+#
+# \begin{figure}[htbp]
+#   \caption{\label{harmonic}Solution to the Poisson problem with a
+#    pure spherical harmonic solution, as represented on the
+#    longitude-latitude coordinate system.}
+#   \begin{center}
+#     \includegraphics[width=0.7\hsize]{gerris.eps}
+#   \end{center}
+# \end{figure}
+#
+# Figure \ref{residual} illustrates the evolution of the maximum
+# residual as a function of CPU time. Figure \ref{rate}
+# illustrates the average residual reduction factor (per V-cycle). The
+# evolution of the norms of the error of the final solution as a
+# function of resolution is illustrated on Figure \ref{error}. The
+# corresponding order of convergence is given on Figure \ref{order}.
+#
+# While initial convergence is satisfactory, the pole singularities
+# quickly dominate the error. The convergence rate of the multigrid
+# solver is also low, due to the large scale ratio induced by the
+# metric. Better solutions at high-resolution can be obtained by
+# increasing the number of iterations of the multigrid solver, but at
+# a large computational cost.
+#
+# \begin{figure}[htbp]
+# \caption{\label{residual}Evolution of the residual.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{residual.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{rate}Average reduction factor.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{rate.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{error}Evolution of the error as a function of resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{order}Corresponding convergence order.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{order.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: S\'ebastien Delaux
+# Command: sh ../harmonic.sh lonlat.gfs
+# Version: 110208
+# Required files: gerris.gfv res-7.ref error.ref order.ref
+# Generated files: gerris.eps residual.eps rate.eps error.eps order.eps
+#
+2 2 GfsPoisson GfsBox GfsGEdge {} {
+  Time { iend = 1 }
+  PhysicalParams { L = M_PI }
+  MetricLonLat M 1.
+  Refine LEVEL
+
+  GModule hypre
+  ApproxProjectionParams { tolerance = 1e-30 nitermin = CYCLE nitermax = CYCLE }
+
+  Global {
+      #include <gsl/gsl_sf.h>
+      @link -lgsl -lgslcblas
+
+      double fact (double n) {
+        if (n <= 1)
+      	  return 1.;
+    	else
+	  return n*fact(n - 1.);
+      }
+
+      double legendre (int l, int m, double x) {
+	  if (m < 0) 
+	      return pow(-1.,fabs(m))*fact(l-fabs(m))/fact(l+fabs(m))*
+	      gsl_sf_legendre_Plm (l, fabs(m), x);
+	  else
+	      return gsl_sf_legendre_Plm (l, m, x);
+      }
+
+      double spherical_harmonic_re (int l, int m, double X, double Y) {
+	  return sqrt((2*l+1)/(4*M_PI)*fact(l-m)/fact(l+m))*
+	  legendre (l, m, sin(Y/180*M_PI))*cos(m*X/180*M_PI);
+      }
+  }
+
+  Init { } { 
+      Div = -4*(4+1)*spherical_harmonic_re (4, 2, x, y) 
+      Sol = spherical_harmonic_re (4, 2, x, y)
+  }
+
+  OutputTime { istep = 1 } {
+    awk '{if ($2 == 1) print CYCLE, $8;}' >> time
+  }
+  OutputProjectionStats { start = end } {
+    awk '{if ($1 == "residual.infty:") print CYCLE, $3, $4;}' >> proj
+  }
+  OutputErrorNorm { start = end } {
+    awk '{print LEVEL, $5, $7, $9}' >> error 
+  } { v = P } {
+    s = Sol
+    v = E
+    unbiased = 1
+  }
+  OutputSimulation { start = end } end-SOLVER-LEVEL.gfs
+}
+GfsBox {}
+GfsBox {}
+1 2 right
+2 1 right

@@ -1,0 +1,142 @@
+/* config.h.in.  Generated from configure.ac by autoheader.  */
+
+/* Define to dummy `main' function (if any) required to link to the Fortran
+   libraries. */
+#undef F77_DUMMY_MAIN
+
+/* Define to a macro mangling the given C identifier (in lower and upper
+   case), which must not contain underscores, for linking with Fortran. */
+#undef F77_FUNC
+
+/* As F77_FUNC, but for C identifiers containing underscores. */
+#undef F77_FUNC_
+
+/* Define if F77 and FC dummy `main' functions are identical. */
+#undef FC_DUMMY_MAIN_EQ_F77
+
+/* Binary age */
+#undef GFS_BINARY_AGE
+
+/* Compilation flags */
+#undef GFS_COMPILATION_FLAGS
+
+/* Interface age */
+#undef GFS_INTERFACE_AGE
+
+/* Major version */
+#undef GFS_MAJOR_VERSION
+
+/* Micro version */
+#undef GFS_MICRO_VERSION
+
+/* Minor version */
+#undef GFS_MINOR_VERSION
+
+/* Version */
+#undef GFS_VERSION
+
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#undef HAVE_DLFCN_H
+
+/* Define to 1 if you have the <fenv.h> header file. */
+#undef HAVE_FENV_H
+
+/* Define to 1 if you have the `funopen' function. */
+#undef HAVE_FUNOPEN
+
+/* Define to 1 if you have the <getopt.h> header file. */
+#undef HAVE_GETOPT_H
+
+/* Define to 1 if you have the `getopt_long' function. */
+#undef HAVE_GETOPT_LONG
+
+/* Define to 1 if you have the `g_mkdtemp' function. */
+#undef HAVE_G_MKDTEMP
+
+/* Define to 1 if you have the <HYPRE.h> header file. */
+#undef HAVE_HYPRE_H
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the <lis.h> header file. */
+#undef HAVE_LIS_H
+
+/* Define to 1 if m4 is available. */
+#undef HAVE_M4
+
+/* Define to 1 if you have the <memory.h> header file. */
+#undef HAVE_MEMORY_H
+
+/* Define to 1 if you have MPI */
+#undef HAVE_MPI
+
+/* Define to 1 if you have the <netcdf.h> header file. */
+#undef HAVE_NETCDF_H
+
+/* Define to 1 if you have the `open_memstream' function. */
+#undef HAVE_OPEN_MEMSTREAM
+
+/* Define to 1 if GModule are supported and if you have pkg-config. */
+#undef HAVE_PKG_CONFIG
+
+/* Define to 1 if you have the <proj_api.h> header file. */
+#undef HAVE_PROJ_API_H
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#undef HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#undef HAVE_STDLIB_H
+
+/* Define to 1 if you have the <strings.h> header file. */
+#undef HAVE_STRINGS_H
+
+/* Define to 1 if you have the <string.h> header file. */
+#undef HAVE_STRING_H
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#undef HAVE_UNISTD_H
+
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+#undef LT_OBJDIR
+
+/* Options for m4 */
+#undef M4_OPTIONS
+
+/* Dynamic module suffix */
+#undef MODULES_SUFFIX
+
+/* Define to 1 if your C compiler doesn't accept -c and -o together. */
+#undef NO_MINUS_C_MINUS_O
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the home page for this package. */
+#undef PACKAGE_URL
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION
+
+/* Define to 1 if you have the ANSI C header files. */
+#undef STDC_HEADERS
+
+/* WaveWatch III version number */
+#undef WW3_VERSION

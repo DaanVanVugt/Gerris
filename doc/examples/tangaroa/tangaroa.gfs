@@ -1,0 +1,80 @@
+# Title: Turbulent air flow around RV Tangaroa
+#
+# Description:
+#
+# An example of the simulations described in Popinet, Smith and Stevens
+# (2004), Journal of Atmospheric and Oceanic Technology, 21.
+#
+# \begin{figure}[htbp]
+# \caption{\label{sections}MPEG movie of the adaptive mesh. The two cross-sections are
+# coloured according to the norm of the velocity vector.}
+# \begin{center}
+# \htmladdnormallinkfoot{\includegraphics[width=0.8\hsize]{sections.eps}}{sections.mpg}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: gerris3D tangaroa.gfs | gfsview3D sections.gfv | ppm2mpeg -s 640x480 > sections.mpg
+# Version: 0.9.2
+# Required files: tangaroa.gts sections.gfv
+# Running time: 7 hours
+# Generated files: sections.mpg sections.eps
+#
+2 1 GfsSimulation GfsBox GfsGEdge {} {
+  Time { end = 2 }
+  # Insert the solid boundary defined explicitly by the
+  # triangulated surface contained in the GTS file tangaroa.gts
+  Solid tangaroa.gts
+  Refine 5
+  RefineSolid 9
+  Init {} { U = 1. }
+
+  # Adapt only in the first GfsBox.
+  # The coarse resolution of the second box acts as an efficient "sponge"
+  # layer to dampen any eddy before it exits the domain.
+  AdaptVorticity { istep = 1 } { maxlevel = (x < 0.5 ? 8 : 0) cmax = 1e-2 }
+
+  OutputSolidStats {} stderr
+  OutputTime { istep = 1 } stderr
+  OutputBalance { istep = 1 } stderr
+  OutputProjectionStats { istep = 1 } stderr
+
+  # Store in SU the integral over time of U
+  # At the end of the simulation SU/(Total integration time) = SU/1.
+  # is the mean velocity
+  EventSum { start = 1 istep = 1 } U SU
+  EventSum { start = 1 istep = 1 } V SV
+  EventSum { start = 1 istep = 1 } W SW
+
+  # Store in SU the integral over time of U^2 (i.e. the variance)
+  EventSum { start = 1 istep = 1 } U*U SU2
+  EventSum { start = 1 istep = 1 } V*V SV2
+  EventSum { start = 1 istep = 1 } W*W SW2
+
+  # Output simulation on standard output (to be read and displayed by GfsView)
+  OutputSimulation { istep = 4 } stdout
+  # Sends a command to GfsView to save a 1024x768 PPM image on standard output
+  EventScript { istep = 4 } { echo "Save stdout { width = 1024 height = 768 }" }
+
+  EventScript { start = 1.5 } { echo "Save sections.ppm { width = 1024 height = 768 }" }
+  EventScript { start = end } {
+      convert -colors 256 sections.ppm sections.eps ; rm -f sections.ppm 
+  }
+
+  OutputSimulation { start = end } simulation-sum {
+      variables = SU,SV,SW,SU2,SV2,SW2
+  }
+  OutputTiming { start = end } stderr
+}
+GfsBox { 
+    left = Boundary {
+	BcDirichlet U 1
+    }
+}
+GfsBox {
+    right = Boundary {
+	BcNeumann U 0
+	BcDirichlet P 0
+    }
+}
+1 2 right

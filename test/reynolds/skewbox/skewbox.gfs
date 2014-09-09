@@ -1,0 +1,56 @@
+# Title: Numerical viscosity for the skew-symmetric scheme with refined box
+#
+# Description:
+#
+# The skew-symmetric module with AMR.
+#
+# \begin{figure}[htbp]
+# \caption{\label{kinetic}Evolution of the kinetic energy.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{kinetic.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{accuracy}Accuracy of the solution as a function of the level of refinement.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{accuracy.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: Daniel Fuster
+# Command: sh skew.sh skewbox.gfs 1
+# Version: 120229
+# Required files: skew.sh error.ref 
+# Running time: 
+# Generated files: kinetic.eps accuracy.eps
+#
+GModule skewsymmetric
+1 2 GfsSkewSymmetric GfsBox GfsGEdge {} {
+  Time { end = 2 dtmax = 1.e-3 }
+  Refine (x > 0.25 || x < -0.25 || y > 0.25 || y < -0.25 ? LEVEL-1 : LEVEL + 1)
+
+  ApproxProjectionParams { tolerance = 1e-6 }
+  ProjectionParams { tolerance = 1e-6 }
+
+  InitFaceValues {} {
+      U0 = (- cos (2.*M_PI*x)*sin (2.*M_PI*y))
+      V0 = (sin (2.*M_PI*x)*cos (2.*M_PI*y))
+      U = U0
+      V = V0
+  }
+  OutputScalarNorm { istep = 1 } div-LEVEL { v = Divergence }
+  OutputScalarSum { istep = 1 } kinetic-LEVEL { v = Velocity2 }
+  OutputErrorNorm { start = end } { 
+      awk '{ print 2**(LEVEL+1)/4+2**(LEVEL-1)*3/4,$3,$5,$7,$9 }'
+  } { 
+      v = Velocity 
+  } { 
+      s = sqrt(U0*U0 + V0*V0)
+      v = E
+      relative = 1 
+  }
+}
+GfsBox {}
+1 1 right
+1 1 top

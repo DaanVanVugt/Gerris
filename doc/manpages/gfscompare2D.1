@@ -1,0 +1,84 @@
+.TH gfscompare 1 "July 10, 2008" "" "User Commands"
+
+.SH NAME
+gfscompare2D, gfscompare3D \- computes the difference between the solutions in FILE1 and FILE2 for variable VAR.
+
+.SH SYNOPSIS
+.B gfscompare
+.RI [OPTION] FILE
+.SH DESCRIPTION
+This manual page documents briefly the
+.B gfscompare
+command.
+
+.SH OPTIONS
+These programs follow the usual GNU command line syntax, with long
+options starting with two dashes (`-').
+A summary of options is included below.
+
+.TP
+.B \-x, \-\-mixed
+Compute error only in mixed cells.
+.TP
+.B \-m V, \-\-min=V
+Set minimum of color scale to V (used with \-S).
+.TP
+.B \-M V, \-\-max=V
+Set maximum of color scale to V.
+.TP
+.B \-a, \-\-abs
+Output the absolute value of the error field.
+.TP
+.B \-C, \-\-constant
+Apply a constant shift to one of the field, minimizing the error between the two fields (useful for pressure).
+.TP
+.B \-w, \-\-not-weighted
+Do not use area-weighted norm estimation.
+.TP
+.B \-c, \-\-centered
+Use error estimation for cell-centered variables.
+.TP
+.B \-p P, \-\-period=P
+Shifts FILE1 by P along the x axis.
+.TP
+.B \-H, \-\-histogram
+Output (error,volume) pairs for each cell used to compute the error norms.
+.TP
+.B \-o, \-\-output
+Output a GTS representation of the error field.
+.TP
+.B \-S, \-\-squares
+Output an OOGL representation of the error field.
+.TP
+.B \-G, \-\-gnuplot
+Output a gnuplot representation of the error field.
+.TP
+.B \-t, \-\-triangulate
+Use center of mass triangulation.
+.TP
+.B \-l, \-\-log
+Output the log10 of the absolute value of the error field.
+.TP
+.B \-f L, \-\-full=L
+Compare only leaf cells descendants of a cell full at level L or all full leaf cells if L = \-1.
+.TP
+.B \-r, \-\-refined
+Display error norm on the finest grid.
+.TP
+.B \-n, \-\-nocheck
+Do not check solid fractions.
+.TP
+.B \-g C, \-\-gradient=C
+Use the C component of the gradient of VAR.
+.TP
+.B \-v, \-\-verbose
+Display difference statistics and other info.
+.TP
+.B \-h, \-\-help
+Display the help and exit.
+
+.SH AUTHOR
+gfscompare was written by Stephane Popinet <s.popinet@niwa.co.nz>.
+.PP
+This manual page was written by Ruben Molina <rmolina@udea.edu.co>,
+for the Debian project (but may be used by others).

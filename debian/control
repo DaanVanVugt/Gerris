@@ -1,0 +1,36 @@
+Source: gerris-snapshot
+Section: science
+Priority: optional
+Maintainer: Stephane Popinet <popinet@users.sf.net>
+Build-Depends: cdbs, debhelper (>= 5), autotools-dev, libglib2.0-dev,
+	       libgts-snapshot-dev,
+	       libnetcdf-dev, libgsl0-dev, libproj-dev, libfftw3-dev,
+               mpi-default-dev [i386 amd64], mpi-default-bin [i386 amd64],
+	       libhypre-dev [i386 amd64],
+	       python, g77 | gfortran, chrpath
+Homepage: http://gfs.sourceforge.net/
+
+Package: gerris-snapshot
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+	 mpi-default-dev [i386 amd64], mpi-default-bin [i386 amd64],
+	 libgts-snapshot-dev,
+	 pkg-config, gcc, sed, gawk, m4
+Conflicts: gerris, libgfs-1.3-1, libgfs-1.3-2, libgfs-mpi-1.3-2, libgfs-dev, libgfs-mpi-dev
+Suggests: gfsview-snapshot, source-highlight, imagemagick, ffmpeg
+Description: Gerris Flow Solver (development snapshot)
+ Gerris is a system for the solution of the partial differential
+ equations describing fluid flow.
+ .
+ A brief summary of its main features:
+ .
+    * Quadtree-based (Octree in 3D) spatial discretisation with
+      automatic and dynamic refinement.
+    * Multigrid Poisson solver.
+    * Second-order Godunov type advection scheme.
+    * Solves the time-dependent incompressible Euler, Stokes ans Navier-Stokes
+      equations.
+    * Support for complex solid boundaries (automatic locally-refined
+      mesh generation).
+ .
+ See http://gfs.sf.net for more information and documentation.

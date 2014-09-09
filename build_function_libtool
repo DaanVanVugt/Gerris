@@ -1,0 +1,38 @@
+#!/bin/sh
+# file generated automatically by configure from 'build_function_libtool'
+
+DIMENSION=$1  # gerris2D or gerris3D
+WDIR=$2       # simulation directory
+
+CC="PREFIX/share/gerris/libtool --tag=CC --silent --mode=compile COMPILER"
+LD="PREFIX/share/gerris/libtool --tag=CC --silent --mode=link COMPILER"
+CFLAGS="-O"
+LDFLAGS="-O -rpath PREFIX/lib/gerris"
+
+touch links
+if sed 's/@/#/g' < function.c | awk '{
+      if ($1 == "#" && $2 == "link") {
+        for (i = 3; i <= NF; i++)
+          printf ("%s ", $i) >> "links";
+        print "";
+      } else if ($1 == "#link") {
+        for (i = 2; i <= NF; i++)
+          printf ("%s ", $i) >> "links";
+        print "";
+      } else print $0;
+    }' > module.c; then :
+else
+    exit 1
+fi
+
+if $CC `pkg-config $DIMENSION --cflags` $CFLAGS -I"$WDIR" \
+    -c module.c; then :
+    if $LD `pkg-config $DIMENSION --libs` $LDFLAGS -o libmodule.la `cat links` module.lo; then :
+    else
+	exit 1
+    fi
+else
+    exit 1
+fi
+
+ln -s .libs/`grep dlname= libmodule.la | sed -e 's/dlname=//' -e "s/'//g"` module.so

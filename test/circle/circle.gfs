@@ -1,0 +1,78 @@
+# Title: Convergence of the Poisson solver with solid boundaries
+#
+# Description:
+#
+# Another of the test cases presented in Popinet \cite{popinet2003}. A
+# circular solid boundary of radius 0.25 is embedded in the
+# domain. The same right-hand-side is used.
+# 
+# This time the problem does not have an analytical solution and we
+# use Richardson extrapolation to estimate the error for a given
+# resolution.
+#
+# \begin{figure}[htbp]
+# \caption{\label{solution}Solution of the Poisson equation.}
+# \begin{center}
+# \includegraphics[width=0.6\hsize]{solution.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{residual}Evolution of the residual.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{residual.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{rate}Average reduction factor.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{rate.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{error}Evolution of the error as a function of resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{order}Corresponding convergence order.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{order.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh circle.sh circle.gfs
+# Version: 100325
+# Required files: circle.sh res-7.ref error.ref order.ref solution.gfv
+# Generated files: residual.eps rate.eps error.eps order.eps solution.eps
+#
+1 0 GfsPoisson GfsBox GfsGEdge {} {
+  Time { iend = 1 }
+  Refine LEVEL
+  Solid (ellipse (0, 0, 0.25, 0.25))
+
+  GModule hypre
+  ApproxProjectionParams { tolerance = 1e-30 erelax = 2 nitermin = CYCLE nitermax = CYCLE }
+
+  Init {} {
+    Div = {
+      int k = 3, l = 3;
+      return -M_PI*M_PI*(k*k + l*l)*sin (M_PI*k*x)*sin (M_PI*l*y);
+    }
+  }
+  OutputTime { istep = 1 } {
+    awk '{if ($2 == 1) {print "CYCLE " $8}}' >> time
+  }
+  OutputProjectionStats { start = end } {
+    awk '{
+      if ($1 == "residual.infty:") print "CYCLE "$3 " " $4;
+    }' >> proj
+  }
+  OutputSimulation { start = end } sim-LEVEL-SOLVER { variables = P }
+}
+GfsBox {}

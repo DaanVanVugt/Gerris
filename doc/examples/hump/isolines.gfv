@@ -1,0 +1,33 @@
+# GfsView 2D
+View {
+  tx = -1.10977 ty = -0.473248
+  sx = 1 sy = 1 sz = 1
+  q0 = 0 q1 = 0 q2 = 0 q3 = 1
+  fov = 17.1233
+  r = 0.3 g = 0.4 b = 0.6
+  res = 1
+  lc = 0.001
+  reactivity = 0.1
+}
+Isoline {
+  r = 0 g = 0 b = 0
+  shading = Constant
+  maxlevel = -1
+} {
+  n.x = 0 n.y = 0 n.z = 1
+  pos = 0
+} P+Zb {
+  amin = 1
+  amax = 1
+  cmap = Jet
+} 0 {
+  reversed = 0
+  use_scalar = 1
+} {
+  n = 30
+}
+Boundaries {
+  r = 0 g = 0 b = 0
+  shading = Constant
+  maxlevel = -1
+}

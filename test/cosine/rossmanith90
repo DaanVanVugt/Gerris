@@ -1,0 +1,6 @@
+# see Rossmanith, 2006, JCP 213, Table 2, t = 1
+# resolution L1 L2 Linfty
+20    2.48e-1 1.96e-1 1.83e-1
+40    5.70e-2 4.62e-2 4.57e-2
+80    1.47e-2 1.20e-2 1.48e-2
+160   3.77e-3 3.22e-3 6.26e-3

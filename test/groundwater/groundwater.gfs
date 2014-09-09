@@ -1,0 +1,95 @@
+# Title: Simple example of groundwater flow following Darcy's law
+#
+# Description:
+#
+# The simplest model of groundwater flow is provided by Darcy's law
+# \cite{bear88}: construed on the macroscopic scale, at
+# which individual pores are invisible, the `discharge' velocity
+# $\mathbf u$ is divergence-free
+# \begin{displaymath}
+# \nabla\cdot\mathbf u = 0
+# \end{displaymath} 
+# and proportional to the hydraulic gradient $\nabla p$:
+# \begin{displaymath} 
+# \mathbf u = - k\nabla p\,.
+# \end{displaymath}
+#
+# The coefficient of proportionality $k$ is known as the permeability
+# or hydraulic conductivity, and may in general vary from place to
+# place or be a second-order tensor; for this first test it is taken
+# as constant.
+#
+# Such a problem can be solved by Gerris using its projection method:
+# one turns off the advection and does not activate viscosity.
+# Darcy's law itself is provided by linear implicit
+# \texttt{GfsSourceCoriolis} terms.  The standard
+# \texttt{GfsSimulation} solver then works as a false-transient
+# iteration toward the steady-state, which will be correct if the
+# pressure converges, implying a divergence-free discharge velocity.
+#
+# The following example is based on Figure 5-3 of
+# Harr~\cite{harr77}[p.~146], but converted from rectangular to
+# circular geometry so as to permit a simple closed-form solution: a
+# uniform aquifer confined to an annular sector, with impermeable arcs
+# and different constant heads imposed on the two radii.  The exact
+# solution has the head constant along radii and varying linearly with
+# angle.
+#
+# \begin{figure}[htbp]
+# \caption{Isobars and velocity vectors for Darcy
+# flow in a confined annular sector aquifer with separate reservoir
+# and drain.}
+# \begin{center}
+# \includegraphics[width=0.6\hsize]{solution.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp] 
+# \caption{Grid-convergence of the pressure and
+# velocity, for Darcy flow in a confined annular sector aquifer with
+# separate reservoir and drain.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{convergence.eps}
+# \end{center} 
+# \end{figure}
+#
+# Author: G. D. McBain
+# Command: sh groundwater.sh groundwater.gfs
+# Version: 120706
+# Required files: groundwater.sh groundwater.gfv p.ref U.ref
+# Running time: 46 s
+# Generated files: solution.eps convergence.eps
+#
+1 0 GfsSimulation GfsBox GfsGEdge { x = 0.5 y = -0.5 } {
+    Time { dtmax = 1 }
+    Refine LEVEL
+    AdvectionParams { scheme = none }
+    Solid (-difference(ellipse(0,0,0.7,0.7), ellipse(0,0,0.3,0.3)))
+    SourceCoriolis 0 1
+    EventStop { istep = 1 } U 1e-9
+
+    EventList { start = end } {
+	OutputErrorNorm {} { awk '{print LEVEL, $5, $7, $9}' >> p } { v = P } {
+	    s = atan2 (y, x)
+	}
+	OutputErrorNorm {} { awk '{print LEVEL, $5, $7, $9}' >> U } { v = U } {
+	    s = y / (x*x + y*y)
+	}
+	OutputErrorNorm {} { awk '{print LEVEL, $5, $7, $9}' >> V } { v = V } {
+	    s = -x / (x*x + y*y)
+	}
+	OutputSimulation solution.gfs
+    }
+}
+Box { 
+    top = Boundary {
+	BcDirichlet P 0
+	BcDirichlet U 0
+	BcNeumann V 0
+    } 
+    left = Boundary {
+	BcDirichlet P -M_PI/2
+	BcNeumann U 0
+	BcDirichlet V 0
+    }
+}

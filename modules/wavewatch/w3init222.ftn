@@ -1,0 +1,22 @@
+!/ ------------------------------------------------------------------- /
+!
+! Initialisation of Wavewatch III (version 2.22) when used with Gerris
+! (-*-F90-*-)
+!
+!/ ------------------------------------------------------------------- /
+MODULE GFSW3INIT
+  USE W3IOGRMD
+  USE W3TESTMD, ONLY : NAPROC, IAPROC, NAPOUT, NAPERR
+  IMPLICIT NONE
+  PUBLIC
+CONTAINS
+  SUBROUTINE GFSW3_INIT ( )
+    IMPLICIT NONE
+    NAPROC = 1
+    IAPROC = 1
+    NAPOUT = 1
+    NAPERR = 1
+    CALL W3IOGR ( 'READ', 30 )
+    RETURN
+  END SUBROUTINE GFSW3_INIT
+END MODULE GFSW3INIT

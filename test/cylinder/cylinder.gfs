@@ -1,0 +1,108 @@
+# Title: Charge relaxation in an axisymmetric insulated conducting column
+#
+# Description:
+#
+# A conducting rigid cylinder of radius $R_o=0.1$ is immersed in an
+# insulating medium. Initially an uniform charge volume density is set
+# in the cylinder ($\rho_e ({\bf x},0)=0.5$).  As time passes the
+# charge migrates from the bulk to the interface of the cylinder but
+# the total charge in the cylinder section is preserved.
+# $$
+# Q(t)= \int_{\Sigma} \rho_e({\bf x},t) \, d \Sigma = Q_o= \pi R_o^2 \, \rho_e({\bf x},0).
+# $$
+# If a VariableVOFConcentration is used instead of a VariableTracer
+# the total charge is also preserved.  The outer electric field
+# reaches a steady-state (Figure \ref{efield}).
+#
+# A more detailed discussion of this simulation is given in
+# \cite{lopez-herrera2011}.
+#
+# \begin{figure}[htbp]
+# \caption{\label{charge}Relative error on the
+# charge per unit of length of cylinder as a function of
+# resolution. (\% Error =$|1-Q(t)/Q_o)|$)}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{charge.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{efield} Steady-state electric field profile 
+# as a function of resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{efield.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{Error norms for the electric field.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: J.M. L\'opez-Herrera and S. Popinet
+# Command: sh cylinder.sh cylinder.gfs
+# Version: 100609
+# Required files: cylinder.sh norms.ref
+# Running time: 15 seconds
+# Generated files: charge.eps efield.eps error.eps
+#
+
+GModule electrohydro
+
+1 0 GfsElectroHydroAxi GfsBox GfsGEdge {} {
+    Global {
+        #define R0 0.1
+        #define rhoinic 0.5
+        #define K 3
+        #define E1 3
+        #define E2 1
+    }
+    Time { end = 15 dtmax = 1.0 }
+
+    VariableTracerVOF T
+    VariableTracer Rhoe
+    VariableVOFConcentration C T
+    InitFraction T (R0 - y)
+    AdaptGradient { istep = 1 } { cmax = 1e-4 minlevel = 5 maxlevel = LEVEL } T
+    Init {} {
+	Rhoe = rhoinic*T
+	C = rhoinic*T
+    }
+ 
+    EventStop { istep = 10 } Ex 0.001
+
+    SourceDiffusionExplicit Rhoe K*T Phi
+    SourceDiffusionExplicit C  K*T/(T+1.e9*(1.-T)) Phi
+
+#    OutputTime { istep = 1 } stderr
+    OutputScalarSum { step = 1 } {
+	awk 'BEGIN { R0 = 0.1 ; rhoinic = 0.5 ; L =1.0 ; Q = 0.5*R0*R0*L*rhoinic }
+	     { print $3,$5,100*sqrt((1.0 - $5/Q)*(1.0 - $5/Q)) }' > rhoe-LEVEL 
+    } { v = Rhoe }
+    OutputScalarSum { step = 1 } {
+	awk 'BEGIN { R0 = 0.1 ; rhoinic = 0.5 ; L =1.0 ; Q = 0.5*R0*R0*L*rhoinic }
+	     { print $3,$5,100*sqrt((1.0 - $5/Q)*(1.0 - $5/Q)) }' > C-LEVEL
+    } { v = C }
+     OutputSimulation { start = end } {
+	awk '{ if ($1 != "#") print $2,sqrt($4*$4+$5*$5); }' > prof-LEVEL
+    } { 
+	format = text 
+	variables = Ex,Ey 
+    }
+    OutputErrorNorm { start = end } norms-LEVEL { v = Ey } {
+	s = (y < R0 ? 0 : 0.5*R0*R0*rhoinic/y)
+    }
+    OutputSimulation { start = end } result-LEVEL.gfs 
+} {
+    # Electric parameters
+    perm = E1*T+E2*(1.-T)
+    charge = Rhoe
+#    charge = C
+    ElectricProjectionParams { tolerance = 1e-7 }
+}
+GfsBox {
+    top = Boundary { BcDirichlet Phi 0 }
+    bottom = Boundary
+}

@@ -1,0 +1,105 @@
+.TH gfs2oogl 1 "July 9, 2008" "" "User Commands"
+
+.SH NAME
+gfs2oogl2D, gfs2oogl3D \- converts a Gerris simulation file to other (graphical) formats.
+
+.SH SYNOPSIS
+.B gfs2oogl
+.RI [OPTION] < GFS_FILE
+.SH DESCRIPTION
+This manual page documents briefly the
+.B gfs2oogl
+command.
+
+.SH OPTIONS
+These programs follow the usual GNU command line syntax, with long
+options starting with two dashes (`-').
+A summary of options is included below.
+
+.TP
+.B \-u V, \-\-iso=V
+Outputs a GTS file isosurface for value V the variable needs to be specified using \-c.
+.TP
+.B \-f D, \-\-stream=D
+Draw evenly-spaced streamlines (D is the spacing).
+.TP
+.B \-I M, \-\-dmin=M
+Controls length of evenly-spaced streamlines default is 0.5.
+.TP
+.B \-O M, \-\-maxcost=M
+Controls compression of streamlines (default is 2e-7).
+.TP
+.B \-b x,.., \-\-box=x,y,..
+Specify bounding box for streamline calculation.
+.TP
+.B \-j, \-\-closed
+Outputs only closed streamlines.
+.TP
+.B \-p F, \-\-profile=F
+Output list of values for coordinates defined in F.
+.TP
+.B \-o, \-\-mixed
+Output text values in mixed cells only.
+.TP
+.B \-L L, \-\-level=L
+Use cells at level L only.
+.TP
+.B \-i, \-\-reinit
+Reinitializes refinement and solid fractions.
+.TP
+.B \-e, \-\-merged
+Draw boundaries of merged cells.
+.TP
+.B \-S, \-\-squares
+Draw (colored) squares.
+.TP
+.B \-g, \-\-gnuplot
+Output gnuplot data.
+.TP
+.B \-x VAL, \-\-sx=VAL
+outputs a GTS surface, cross section for x = VAL of the scalar variable.
+.TP
+.B \-y VAL, \-\-sy=VAL
+outputs a GTS surface, cross section for y = VAL of the scalar variable.
+.TP
+.B \-z VAL, \-\-sz=VAL
+outputs a GTS surface, cross section for z = VAL of the scalar variable.
+.TP
+.B \-s S, \-\-surface=S
+outputs the surface defined by file S (or the solid surface is S is equal to `solid').
+.TP
+.B \-V S, \-\-vector=S
+output an OOGL representation of the velocity vector field in the mixed cells.
+.TP
+.B \-l F, \-\-streamlines=F
+draw streamlines starting from each point defined in file F.
+.TP
+.B \-C F, \-\-cylinder=F
+draw stream cylinders starting from each point defined in file F.
+.TP
+.B \-R F, \-\-ribbon=F
+draw stream ribbons starting from each point defined in file F.
+.TP
+.B \-r
+refines the solid surface according to the local resolution.
+.TP
+.B \-c V, \-\-color=V
+color surfaces, streamlines etc... according to the.
+.TP
+.B \-m V, \-\-min=V
+set minimum scalar value to V.
+.TP
+.B \-M V, \-\-max=V
+set maximum scalar value to V.
+.TP
+.B \-v, \-\-verbose
+display statistics and other info.
+.TP
+.B \-h, \-\-help
+display the help and exit.
+
+.SH AUTHOR
+gfs2oogl was written by Stephane Popinet <s.popinet@niwa.co.nz>.
+.PP
+This manual page was written by Ruben Molina <rmolina@udea.edu.co>,
+for the Debian project (but may be used by others).

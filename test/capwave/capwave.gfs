@@ -1,0 +1,84 @@
+# Title: Planar capillary waves
+#
+# Description:
+#
+# A small amplitude sinusoidal wave oscillates under surface
+# tension. Prosperetti \cite{prosperetti81} found a solution to this
+# initial value problem in the limit of a vanishingly small initial
+# amplitude.
+#
+# The domain size is 1x3 units, large enough to minimise the effect of
+# boundaries (Prosperetti's theory is valid for infinite domains).
+#
+# Table \ref{convergence} shows the convergence of various solvers as
+# a function of resolution: Gerris, the marker technique of
+# \cite{popinet99}, Surfer \cite{gueyffier98}, PROST and CLSVOF
+# \cite{gerlach2006}. The same data is represented on Figure \ref{fig-convergence}.
+#
+# The time-evolution of the amplitude given by Prosperetti's theory
+# and Gerris ($64^2$) is given on Figure \ref{amplitude}.
+#
+# \begin{table}[htbp]
+# \caption{\label{convergence}Convergence of the relative error between the analytical
+# solution and simulation results from various solvers.}
+# \begin{center}
+# \begin{tabular}{|l|ccccc|} \hline
+# Method & $8^2$ & $16^2$ & $32^2$ & $64^2$ & $128^2$ \\ \hline
+# \input{convergence.tex} & 0.000545 \\
+# \input{markers.tex} \\
+# \input{surfer.tex} \\
+# \input{prost.tex} \\
+# \input{clsvof.tex} \\ \hline
+# \end{tabular}
+# \end{center}
+# \end{table}
+#
+# \begin{figure}[htbp]
+# \caption{\label{fig-convergence}Convergence of the RMS error as a
+# function of resolution (number of grid points per wavelength) for
+# the methods indicated in the legend.}
+# \begin{center}
+# \includegraphics[width=\hsize]{convergence.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{amplitude}Evolution of the amplitude of the capillary wave as a
+# function of non-dimensional time $\tau=\omega_0 t$.}
+# \begin{center}
+# \includegraphics[width=\hsize]{amplitude.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh capwave.sh capwave.gfs
+# Version: 1.1.0
+# Required files: capwave.sh convergence.ref prosperetti markers.tex surfer.tex prost.tex clsvof.tex
+# Generated files: convergence.tex amplitude.eps convergence.eps markers.tex surfer.tex prost.tex clsvof.tex
+#
+3 5 GfsSimulation GfsBox GfsGEdge {} {
+  Time { end = 2.2426211256 }
+  ApproxProjectionParams { tolerance = 1e-6 }
+  ProjectionParams { tolerance = 1e-6 }
+  # Decrease the resolution linearly down to 3 levels close to the
+  # bottom and top boundaries
+  Refine floor(LEVEL + 1 - (LEVEL - 2)*fabs(y)/1.5)
+  VariableTracerVOFHeight T
+  VariableCurvature K T
+  SourceTension T 1 K
+  VariablePosition Y T y
+  SourceDiffusion U 0.0182571749236
+  SourceDiffusion V 0.0182571749236
+  InitFraction T (y - 0.01*cos (2.*M_PI*x))
+  OutputScalarNorm { step = 3.04290519077e-3 } {
+      awk '{printf ("%g %g\n", $3*11.1366559937, $9); fflush(stdout); }' > wave-LEVEL
+  } { v = (T > 0. && T < 1. ? Y : 0.) }
+}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+1 1 right
+2 2 right
+3 3 right
+1 2 top
+1 3 bottom

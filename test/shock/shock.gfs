@@ -1,0 +1,75 @@
+# Title: Transcritical flow over a bump
+#
+# Description:
+#
+# This is a classical test case for shallow-water solvers. Water
+# flowing over a bump goes from subcritical through supercritical over
+# the bump and back to subcritical. Figure \ref{h-8} illustrates the
+# stationary solution with a shock. Figure \ref{error} gives the
+# convergence with resolution. The analytical solution was obtained
+# thanks to the SWASHES library \cite{delestre2012}.
+#
+# \begin{figure}[htbp]
+# \caption{\label{h-8}Numerical and analytical solutions for
+# transcritical flow over a bump.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{h-8.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{error}Convergence of the error between the numerical
+# and analytical solution with the spatial resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh shock.sh
+# Version: 120717
+# Running time: 30 seconds
+# Required files: shock.sh error.ref
+# Generated files: error.eps h-8.eps
+#
+1 0 GfsRiver GfsBox GfsGEdge { x = 0.5 } {
+    PhysicalParams { L = 25 g = 9.81 }
+    Refine LEVEL
+    InitMask {} (y < 25.*(0.5 - 1./pow(2,LEVEL)))
+    Init {} {
+	Zb = MAX(0., 0.2 - 0.05*(x - 10.)*(x - 10.))
+	P = 0.33 - Zb
+    }
+    AdvectionParams { 
+	# Sweby seems to work better than minmod for this test case
+	gradient = gfs_center_sweby_gradient 
+    }
+    EventStop { step = 1 } H 1e-5
+    Time { end = 1000 }
+#    OutputTime { istep = 1 } stderr
+    OutputSimulation { start = end } {
+	gfsplot "
+          set term postscript eps color solid lw 2 16
+          set output 'h-LEVEL.eps'
+          set xlabel 'x'
+          set ylabel 'z'
+          plot [5:15]'swashes' u 1:4 t 'topography' w l, \
+                     'swashes' u 1:6 t 'free surface (analytical)' w l, \
+                     '-' u (x):(H) w p t 'free surface (numerical)'
+        "
+    } { format = text }
+    OutputErrorNorm { start = end } { awk '{ print LEVEL,$5,$7,$9 }' } { v = H } {
+	s = href.cgd
+	v = EH
+    }
+    OutputSimulation { start = end } end-LEVEL.txt { format = text }
+}
+GfsBox {
+    right = Boundary {
+	BcDirichlet P 0.33
+	BcNeumann U 0
+    }
+    left = Boundary {
+	BcDirichlet U 0.18
+    }
+}

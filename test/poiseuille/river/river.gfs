@@ -1,0 +1,64 @@
+# Title: Poiseuille flow with multilayer Saint-Venant
+#
+# Description:
+#
+# Similar test case but for a half-Poiseuille flow solved using the
+# multi-layer Saint-Venant solver.
+#
+# \begin{figure}[htbp]
+# \caption{\label{convergence}Convergence of the error norms as functions
+# of resolution (number of grid points in the channel depth).}
+# \begin{center}
+# \includegraphics[width=\hsize]{convergence.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh river.sh river.gfs
+# Version: 120620
+# Required files: river.sh error.ref
+# Generated files: convergence.eps
+#
+1 1 GfsRiver GfsBox GfsGEdge {} {
+    Layers NL
+    PhysicalParams { L = 1. }
+    Init {} { P = 0.5 }
+    Source U A*P/NL
+    EventStop { istep = 1 } U 1e-8 DU
+#    OutputTime { istep = 1 } stderr
+    Time { iend = 20 }
+    OutputSimulation { start = end } {
+	awk '{
+  	  nl = NL;
+          if ($1 == "#") {
+            for (i = 2; i <= NF; i++) {
+              split($i,a,":")
+              if (a[2] == "U0")
+                start = a[1];
+            }
+          }
+          else {
+            dz = $4/nl;
+            emax = 0.;
+  	    for (i = 0; i < nl; i++) {
+              z = dz*(0.5+i)
+              u = A/(2.*NU)*(1./4 - (0.5 - z)*(0.5 - z))
+              eu = u - $(start+i)/dz
+              if (eu < 0.)
+                eu = -eu;
+              if (eu > emax)
+                emax = eu;
+            }
+            print nl,emax
+          }
+        }'
+    } { format = text }
+} {
+    # vertical viscosity
+    nu = NU
+}
+GfsBox {
+    top = Boundary
+    bottom = Boundary
+}
+1 1 right

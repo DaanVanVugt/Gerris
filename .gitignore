@@ -21,3 +21,6 @@
 *.i*86
 *.x86_64
 *.hex
+
+# Makefile things
+Makefile # created by ./configure from Makefile.am and Makefile.in

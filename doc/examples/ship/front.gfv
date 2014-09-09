@@ -1,0 +1,50 @@
+# GfsView 3D
+View {
+  tx = -0.692077 ty = -0.492648
+  sx = 1 sy = 1 sz = 3
+  q0 = 0 q1 = 0 q2 = 0 q3 = 1
+  fov = 10.2648
+  r = 1 g = 1 b = 1
+  res = 1
+  lc = 0.001
+  reactivity = 0.1
+}
+VOF {
+  r = 1 g = 1 b = 1
+  shading = Constant
+  maxlevel = -1
+} {
+  n.x = 0 n.y = 0 n.z = 1
+  pos = 0
+} Z {
+  amin = 0 min = -0.005
+  amax = 0 max = 0.005
+  cmap = Jet
+} T {
+  reversed = 0
+  use_scalar = 1
+  draw_edges = 0
+}
+Solid {
+  r = 1 g = 1 b = 1
+  shading = Constant
+  maxlevel = -1
+} {
+  n.x = 0 n.y = 0 n.z = 1
+  pos = 0
+} Velocity {
+  amin = 1
+  amax = 1
+  cmap = Jet
+} {
+  reversed = 0
+  use_scalar = 0
+}
+Symmetry {
+  r = 0 g = 0 b = 0
+  shading = Constant
+  maxlevel = -1
+} {
+  n.x = 0 n.y = 1 n.z = 0
+  pos = 0.5
+}

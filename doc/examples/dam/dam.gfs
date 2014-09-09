@@ -1,0 +1,88 @@
+# Title: Dam break on complex topography
+#
+# Description:
+#
+# An example similar to that
+# \htmladdnormallinkfoot{presented}{http://www.amath.washington.edu/~rjl/catalina/leveque1.pdf}
+# by Randall J. LeVeque illustrating the solution of the
+# \htmladdnormallinkfoot{Saint-Venant}{http://en.wikipedia.org/wiki/Shallow\_water\_equations}
+# (or shallow-water) equations with complex topography, wetting and
+# drying, shocks and hydrostatic equilibrium.
+#
+# \begin{figure}[htbp]
+# \caption{Topography (red) and animation of the water level (blue).}
+# \begin{rawhtml}
+# <DIV CLASS="center">
+# <IMG SRC="dam/dam.gif">
+# </DIV>
+# \end{rawhtml}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: gerris2D dam.gfs
+# Version: 1.3.1
+# Required files: dam.plot
+# Running time: 2 minutes
+# Generated files: dam.gif
+#
+# Use the GfsRiver Saint-Venant solver
+1 0 GfsRiver GfsBox GfsGEdge {} {
+    PhysicalParams { L = 8. }
+    
+    # Define a 1D domain using cell masking
+    RefineSurface 9 (y - 8.*(0.5 - 1./512.))
+    InitMask {} (y < 8.*(0.5 - 1./512.))
+
+    # Set the topography Zb and the initial water surface elevation P
+    Init {} {
+	Zb = x*x/8.+cos(M_PI*x)/2.
+	P = {
+	    double p = x > 0. ? 0.35 : x < -2. ? 1.9 : -1.;
+	    return MAX (0., p - Zb);
+	}
+    }
+    PhysicalParams { g = 1. }
+
+    # Use a first-order scheme rather than the default second-order
+    # minmod limiter. This is just to add some numerical damping.
+    AdvectionParams {
+       # gradient = gfs_center_minmod_gradient
+	gradient = none
+    }
+
+    Time { end = 40 }
+    OutputProgress { istep = 10 } stderr
+    OutputScalarSum { istep = 10 } ke { v = (P > 0. ? U*U/P : 0.) }
+    OutputScalarSum { istep = 10 } vol { v = P }
+    OutputScalarNorm { istep = 10 } u { v = (P > 0. ? U/P : 0.) }
+
+    # use gfsplot/gnuplot for online visualisation and generation of figures
+    OutputSimulation { step = 0.3 } {
+	gfsplot "
+          load 'dam.plot'
+          set title sprintf('t = %4.1f', (t))
+          plot [-4.:4.]'-' u (x):(Zb):(H) w filledcu lc 3, \
+                       '-' u (x):(Zb) w l lw 4 lc 1 lt 1
+          set term pngcairo size 800,600
+          set output sprintf('sim-%04.1f.png', (t))
+          replot
+          set term wxt noraise
+        "
+    } { format = text }
+
+    # Combine all the gif images into a gif animation using gifsicle
+    EventScript { start = end } {
+	echo "\rcreating animation...            " > /dev/stderr
+        sleep 10 # give a chance to gnuplot to catch up
+	for f in sim-*.png; do
+	    convert $f -trim +repage -bordercolor white \
+		-border 10 -resize 640x282! `basename $f .png`.gif && rm -f $f
+	done
+	gifsicle --colors 256 --optimize --delay 12 --loopcount=0 sim-*.gif > dam.gif && \
+	    rm -f sim-*.gif
+    }
+}
+GfsBox {
+    left = Boundary
+    right = Boundary
+}

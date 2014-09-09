@@ -1,0 +1,68 @@
+# Title: Potential flow around a sphere
+#
+# Description:
+#
+# The axisymmetric potential flow around a sphere is computed (Figure
+# \ref{isolines}) and compared to the theoretical solution
+# \cite{lamb}. A large domain is used together with variable spatial
+# resolution to minimise the influence of the finite domain size.
+#
+# Figure \ref{error} and \ref{order} illustrate the convergence of the
+# solution for the horizontal component of velocity with increased
+# resolution.
+#
+# \begin{figure}[htbp]
+# \caption{\label{isolines}Isolines of the velocity components ($x$ in red, $y$ in blue).}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{isolines.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{error}Evolution of the error as a function of resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{order}Corresponding convergence order.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{order.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh axi.sh axi.gfs
+# Version: 1.3.0
+# Required files: axi.sh error.ref order.ref isolines.gfv
+# Generated files: error.eps order.eps isolines.eps
+#
+1 0 GfsAxi GfsBox GfsGEdge {} {
+    Time { end = 0 }
+    PhysicalParams { L = 50 }
+    AdvectionParams { scheme = none }
+    ApproxProjectionParams { tolerance = 1e-10 }
+    Refine 4
+    Refine (LEVEL + 1./50.*(x*x + y*y)*(4. - LEVEL))
+    Global {
+	#define A0 0.5
+	#define U0 1.
+    }
+    Solid (ellipse (0., 0., A0, A0))
+    Init {} {
+	U = U0
+	Phi = {
+	    double r = sqrt (cx*cx + cy*cy);
+	    return U0*A0*A0*A0*cx/(2.*r*r*r);
+	}
+    }
+    OutputErrorNorm { start = end } { awk '{ print LEVEL " " $7 " " $9}' } { v = U } {
+ 	s = (dx("Phi") + 1.)
+    }
+    OutputSimulation { start = end } sim-LEVEL.gfs
+}
+GfsBox {
+    left = Boundary { BcDirichlet U U0 }
+    right = Boundary { BcDirichlet U U0 }
+}

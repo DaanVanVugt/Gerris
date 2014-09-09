@@ -1,0 +1,195 @@
+#!/bin/bash
+# script to join gerris output files in parallel simulations
+
+
+help ()
+{
+    echo ""
+    echo "Usage: gfsjoin Simfile Directory Rootname NP Tailname > Joined"
+    echo ""
+    echo "Simfile:        Name of the simulation file"
+    echo "Directory:      Directory where results are located"
+    echo "Rootname:       File root name"
+    echo "NP:             Number of processors"
+    echo "Tailname:       File tail name"
+    echo ""
+    exit
+}
+
+#verbose=1
+
+message ()
+{
+    if test $verbose; then
+	echo $1 > /dev/stdout
+    fi
+}
+
+errmessage ()
+{
+        echo $1 > /dev/stderr
+}
+
+
+#------------------------------------------------------------------------------
+
+#checking input
+if [ $# -ne 5 ]; then
+   if [ $1 == '-h' ]; then
+       help
+   else
+        errmessage "Input error, this command requires 5 arguments"
+        errmessage "Type gfsjoin -h for more info"
+   fi
+exit
+fi
+
+# removing all blanks and tabs immediately before the end of line.
+# Comments are also removed to avoid errors
+tmp=`mktemp -d`
+sed -e 's/#.*//' -e 's/[ ^I]*$//' -e '/^$/ d' $1 | sed '/^#/ d'  > $tmp/sim.tmp
+
+c1=$3
+c2=$5
+c3="$tmp/sim.tmp"
+numproc=$4
+dir=$2
+
+# checking operations
+y=`expr ${#c2} - 2`
+tailst=`expr substr $c2 $y 3`
+
+if [ $tailst == 'gfs' ]; then
+   compress=0
+else
+        if [ $tailst == '.gz' ]; then
+          compress=1
+          c2=`expr substr $c2 1 $[$y-1]`
+        else
+          errmessage "Your simulation file has not a valid extension ("$tailst")"
+          errmessage "The correct file extensions are either .gfs or .gz"
+          exit
+        fi
+fi
+
+p1=$(awk '/GfsSimulation/ {print $1}' $c3)
+p2=$(awk '/GfsSimulation/ {print $2}' $c3)
+
+i=1
+if [ $compress -eq 1 ]; then
+while [ $i -le $numproc ]; do
+    gunzip -q ${dir}'/'$c1$[$i-1]$c2
+    i=$[$i+1]
+done
+fi
+
+message 'Creating output................'
+
+# Variables to handle the files names
+i=0
+while [ $i -lt $numproc ]; do
+    mainfile[$i]=${dir}'/'$c1$i$c2
+    message "${mainfile[$i]}"
+    i=$[$i+1]
+done
+
+# Copying the first two lines of the simulation file
+head -2 ${mainfile[0]} > $tmp/tmp.tmp
+# Inserting the correct number of boxes and connections
+sed -e '/GfsSimulation/ s/[0-9]*/'$p1'/1' -e '/GfsSimulation/s/[0-9]*/'$p2'/2' $tmp/tmp.tmp
+
+# Copying solid file (if any)
+sed -n '/SurfaceFile/ p' $c3
+
+# The first two lines are removed because they have useless information.
+# As I have already inserted the solid, this information is also removed from the files
+i=0
+while [ $i -lt $numproc ]; do
+    nend=$(echo -n $(sed -n '/GtsSurface/,/Gfs/ p' ${mainfile[$i]} | tail -1 | awk '{print $1}' ))
+    nend=$(echo -n $(awk '$1 ~ /'$nend'/ {print NR}' ${mainfile[$i]} | head -1 ))
+    nend=$[$nend+0]
+    if [ $nend -ne 0 ]; then
+	sed -e '1,2 d' -e '/GtsSurface/,'$[$nend-1]' d' ${mainfile[$i]} > $tmp/tmpfile$i
+    else
+	more +3 ${mainfile[$i]} > $tmp/tmpfile$i
+    fi
+    i=$[$i+1]
+done
+
+#Taking the initial common arguments
+sed -n '1,/GfsBox/p' $tmp/tmpfile0 | sed '$ d' 
+
+# Creating temporal file with all the boxes (sed is used to remove the 
+# local connectivities in case they will be equal)
+# boxes in proc 0
+(sed -n '/GfsBox/,$p' $tmp/tmpfile0 | awk '
+BEGIN{}
+{
+condition1 = ( $3 == "right" || $3 == "left" || $3 == "top" || $3 == "bottom" || $3 == "front" || $3 == "back" )
+if(!(NF == 3 && condition1)) {print $0}
+}
+END{}') > $tmp/tmp.tmp
+
+# the rest of boxes
+i=1
+while [ $i -lt $numproc ]; do
+    (sed -n '/GfsBox/,$p' $tmp/tmpfile$i | awk '
+BEGIN{}
+{
+condition1= ( $3 == "right" || $3 == "left" || $3 == "top" || $3 == "bottom" || $3 == "front" || $3 == "back" )
+if(!(NF == 3 && condition1)) {print $0}
+}
+END{}') >> $tmp/tmp.tmp
+    i=$[$i+1]
+done
+
+message
+message "IMPORTANT: This script assumes that the \"id\" is in correlative order in your simulation file (not the pid)"
+message
+
+awk '$1 ~ /GfsBox/ && /id =/ {print $0}' $tmp/tmp.tmp | \
+    awk 'BEGIN{}
+     { i = 0
+       do {
+           i++
+       } while ( $i !~ /^id/ )
+        print $(i+2)
+}
+END{}' > $tmp/tmp.tmp2
+
+# The last box in the temporal file is:
+lastid=$(tail -1 $tmp/tmp.tmp2)
+# And the total number of boxes:
+numboxes=$(wc -l $tmp/tmp.tmp2 | awk '{print $1}')
+
+message "Putting boxes in order in the final file"
+# Boxes are pasted in the final file in order (it is assumed to be sequential)
+i=1
+while [ $i -le $numboxes ]; do
+    if [ $i -ne $lastid ]; then
+	message -n "$i ,"
+        n0=$(awk '{if($1 == '$i') {print NR}}' $tmp/tmp.tmp2)
+        n1=$(awk 'FNR == '$[$n0+1]' {print $1}' $tmp/tmp.tmp2)
+        # Taking the lines of this range (the last line is removed
+	# because it corresponds to the next box)
+        (awk '/id = '$i' pid/,/id = '$n1' pid/ {print $0}' $tmp/tmp.tmp | head -n -1)
+        i=$[$i+1]
+    else
+	message -n "$i ,"
+        nf=$(awk '$1 ~ /GfsBox/ && $5 == '$i' && $3 ~ /id/ {print NR}' $tmp/tmp.tmp)
+        more +$nf $tmp/tmp.tmp
+        i=$[$i+1]
+    fi
+done
+
+# Copying the global conectivities
+tail -n $p2 $c3
+
+message
+message
+if [ $compress -eq 1 ]; then
+	message 'compressing files again'
+	gzip -f -q ${dir}'/'${c1}*'.gfs'
+fi
+
+rm -rf $tmp

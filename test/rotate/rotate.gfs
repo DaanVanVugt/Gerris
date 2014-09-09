@@ -1,0 +1,125 @@
+# Title: Rotation of a straight interface
+#
+# Description:
+#
+# A straight interface is advected by a pure shear flow. The exact
+# solution is simply a rotation of the interface around the center of
+# the box. Note that both the interface and the velocity field should
+# be described exactly by a second-order method.
+#
+# Figure \ref{evolution} illustrates what happens when using a VOF
+# scheme to follow the interface. The green segments are the
+# VOF-reconstructed interface obtained when using a "naive" Eulerian
+# PLIC method. The red segments are the VOF-reconstructed interface
+# obtained when using a "multiband" Eulerian PLIC method (with $n = 4$
+# bands).
+#
+# Figure \ref{error} illustrates the evolution of the error with
+# time. For $t=1$ the interface is at 45 degrees and the errors in
+# fluxes cancel out exactly.
+#
+# \begin{figure}[htbp] 
+# \caption{\label{evolution}Evolution of the VOF interface (green $n =
+# 1$, red $n = 4$) in a shear flow. (a) $t=0$, (b) $t=1$, (c) $t=2$,
+# (d) $t=5$.}
+# \begin{center}
+# \begin{tabular}{cc}
+# (a) \includegraphics[width=0.45\hsize]{rotate-0.eps} &
+# (b) \includegraphics[width=0.45\hsize]{rotate-1.eps} \\
+# (c) \includegraphics[width=0.45\hsize]{rotate-2.eps} &
+# (d) \includegraphics[width=0.45\hsize]{rotate-5.eps}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp] 
+# \caption{\label{error}Volume fraction error as a function of time.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: gerris2D rotate.gfs
+# Version: 110920
+# Required files: rotate.gfv cells.gfv error.ref n1-0.gnu n1-1.gnu n1-2.gnu n1-5.gnu error.n1
+# Running time: 1 second
+# Generated files: error.eps rotate-0.eps rotate-1.eps rotate-2.eps rotate-5.eps
+#
+1 0 GfsAdvection GfsBox GfsGEdge {} {
+    PhysicalParams { L = 2. }
+    Refine 3
+    VariableTracerVOFHeight T
+    Init {} { U = y }
+    # fixme: 1e-9 to circumvent a bug in GfsView
+    InitFraction T (x - 1e-9)
+    Variable Tref
+    InitFraction { istep = 1 } Tref (x - t*y)
+    OutputErrorNorm { istep = 1 } error { v = T } { s = Tref }
+    Time { end = 5 }
+    GModule gfsview
+    OutputScalarSum { istep = 1 } t { v = T }
+    OutputView { step = 1 } rotate-%g.gnu { format = Gnuplot } rotate.gfv
+    OutputView { start = end } cells.gnu { format = Gnuplot } cells.gfv
+    EventScript { start = end } {
+	gnuplot <<EOF
+set term postscript eps color lw 3 18
+set output 'error.eps'
+set ylabel 'Maximum volume fraction error'
+set xlabel 'Time'
+set key top left
+set logscale y
+set grid y
+plot [][1e-3:]'error' u 3:9 w l t 'n=4', 'error.n1' u 3:9 w l t 'n=1'
+EOF
+        for t in 0 1 2 5; do
+	    gnuplot <<EOF
+set term postscript eps color lw 2 solid
+set output 'rotate-$t.eps'
+unset border
+unset xtics
+unset ytics
+unset key
+set size ratio -1
+plot 'cells.gnu' w l lc 0, 'rotate-$t.gnu' w l lw 2 lc 1, 'n1-$t.gnu' w l lc 2 lw 2
+EOF
+        done
+
+        status=0;
+        if awk '{if ($5 != 2.) { print $5 > "/dev/stderr"; exit (1); }}' < t ; then :
+        else
+            status=$GFS_STOP;
+        fi
+
+        paste error error.ref > tmp
+	if awk '{
+          if ($9 > $20) {
+            print $3,$9,$20 > "/dev/stderr"
+            exit (1);
+          }
+        }' < tmp; then :
+	else
+	    status=$GFS_STOP;
+        fi
+	
+	exit $status
+    }
+}
+GfsBox {
+    left = Boundary { 
+	BcDirichlet U y
+	BcAngle T (90. + atan2(1.,t)*180./M_PI)
+    }
+    right = Boundary { 
+	BcDirichlet U y
+	BcAngle T (90. - atan2(1.,t)*180./M_PI)	
+    }
+    top = Boundary {
+	BcDirichlet U y
+	BcAngle T (180. - atan2(1.,t)*180./M_PI)
+    }
+    bottom = Boundary {
+	BcDirichlet U y
+	BcAngle T atan2(1.,t)*180./M_PI
+    }
+}

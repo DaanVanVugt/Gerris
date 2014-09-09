@@ -1,0 +1,166 @@
+# Title: Rossby--Haurwitz wave with a free surface
+#
+# Description:
+#
+# Same test case but using the GfsOcean solver implementing an
+# implicit solution to the linearised shallow-water equations.
+#
+# The initial transient (geostrophic adjustement) seems to be too
+# strong.
+#
+# \begin{figure}[htbp]
+# \caption{\label{height}Detail of height field after one complete revolution
+# (24 days). Numerical solution in red and reference solution in
+# green. (a) C16, (b) C32, (c) C64.}
+# \begin{center}
+# \begin{tabular}{cc}
+# (a) \includegraphics[width=0.45\hsize]{h-4.eps} &
+# (b) \includegraphics[width=0.45\hsize]{h-5.eps} \\
+# \multicolumn{2}{c}{(c) \includegraphics[width=0.45\hsize]{h-6.eps}}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{error}Detail of relative error field after one
+# complete revolution (24 days). Red is positive and green
+# negative. 10 metres contour interval. (a) C16, (b) C32, (c) C64.}
+# \begin{center}
+# \begin{tabular}{cc}
+# (a) \includegraphics[width=0.45\hsize]{ehpm-4.eps} &
+# (b) \includegraphics[width=0.45\hsize]{ehpm-5.eps} \\
+# \multicolumn{2}{c}{(c) \includegraphics[width=0.45\hsize]{ehpm-6.eps}}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{error-t}Evolution of maximum relative error on height with time.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{eh.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{order}Convergence of final errors with spatial resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{order.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{kinetic}Evolution of kinetic energy with time.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{ec.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh ../rossby.sh ocean.gfs
+# Version: 120614
+# Required files: ehp.gfv ehm.gfv h.gfv href.gfv ec-6 eh-4.ref eh-5.ref eh-6.ref
+# Running time: 10 minutes
+# Generated files: ehpm-4.eps ehpm-5.eps ehpm-6.eps h-4.eps h-5.eps h-6.eps ec.eps eh.eps order.eps
+#
+6 12 GfsOcean GfsBox GfsGEdge {} {
+    Global {
+	#define AR 6.37122e6
+	#define N 4.
+	#define Umax 50.
+	#define M (Umax/(N*AR))
+	#define K M
+	
+	#define Omega 7.292e-5
+	#define G 9.806116
+	#define DTR (M_PI/180.)
+
+	// Williamson 1992, eq. (137)
+	static double u0 (double lambda, double phi) {
+	    double cosphi = cos (phi), sinphi = sin (phi);
+	    return AR*M*cosphi + AR*K*pow (cosphi, N - 1)*
+	    cos (N*lambda)*(N*sinphi*sinphi - cosphi*cosphi);
+	}
+
+	// Williamson 1992, eq. (138)
+	static double v0 (double lambda, double phi) {
+	    double cosphi = cos (phi), sinphi = sin (phi);
+	    return - AR*K*N*pow (cosphi, N - 1)*sinphi*sin (N*lambda);
+	}
+
+        // Williamson 1992, eq. (139)
+	static double vorticity0 (double lambda, double phi) {
+	    return 2.*M*sin(phi) - K*sin(phi)*pow (cos (phi), N)*(N*N + 3.*N + 2.)*cos (N*lambda);
+        }
+
+        // Williamson 1992, eqs. (140-143)
+	static double p0 (double lambda, double phi, double t) {
+	    double nu = (N*(3. + N)*M - 2.*Omega)/((1. + N)*(2. + N));
+	    lambda -= nu*t;
+	    double cosphi = cos (phi);
+	    double Aphi = M/2.*(2.*Omega + M)*cosphi*cosphi + K*K/4.*pow (cosphi, 2.*N)*
+	      ((N + 1.)*cosphi*cosphi + 2.*N*N - N - 2. - 2.*N*N*pow(cosphi, -2.));
+	    double Bphi = 2.*(Omega + M)*K/((N + 1.)*(N + 2.))*pow(cosphi, N)*
+              (N*N + 2.*N + 2. - (N + 1.)*(N + 1.)*cosphi*cosphi);
+	    double Cphi = K*K/4.*pow(cosphi,2.*N)*((N + 1.)*cosphi*cosphi - (N + 2.));
+	    return AR*AR*(Aphi + Bphi*cos (N*lambda) + Cphi*cos (2.*N*lambda));
+	}
+    }
+    PhysicalParams { 
+	L = 2.*M_PI*AR/4. 
+        # g*H0
+	g = G*8e3
+    }
+    MetricCubed M LEVEL
+    SourceCoriolis 2.*Omega*sin(y*DTR)
+
+    Init {} { 
+	(U,V) = (u0(x*DTR,y*DTR), v0(x*DTR,y*DTR))
+	P = p0(x*DTR,y*DTR,0)
+	# fixme: it would be more logical to set H = H0 and g = 9.806116
+	H = 1
+    }
+
+    ApproxProjectionParams { tolerance = 1e-9 }
+
+    Refine LEVEL
+
+    # ~24 days
+    Time { end = 2073534 dtmax = 1e3 }
+#    OutputTime { istep = 1 } stderr
+#    OutputProjectionStats { istep = 1 } stderr
+
+    OutputScalarNorm { istep = 10 } v-LEVEL { v = V }
+    OutputScalarSum { istep = 10 } ec-LEVEL { v = Velocity2 }
+    OutputScalarSum { istep = 10 } zeta-LEVEL { v = Vorticity }
+    OutputScalarSum { istep = 10 } p-LEVEL { v = P }
+    OutputErrorNorm { istart = 1 istep = 10 } eh-LEVEL { v = P/G } {
+	s = p0(x*DTR,y*DTR,t)/G
+	v = EH unbiased = 1 relative = 1
+    }
+    OutputSimulation { start = end } end-LEVEL.gfs
+#    OutputSimulation { istep = 10 } stdout
+
+    GModule gfsview
+    OutputView { start = end } ehp-LEVEL.gnu { format = Gnuplot } ehp.gfv
+    OutputView { start = end } ehm-LEVEL.gnu { format = Gnuplot } ehm.gfv
+    OutputView { start = end } h-LEVEL.gnu { format = Gnuplot } h.gfv
+    OutputView { start = end } href-LEVEL.gnu { format = Gnuplot } href.gfv
+}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+1 2 right
+2 3 top
+3 4 right
+4 5 top
+5 6 right
+6 1 top
+1 3 top left
+3 5 top left
+5 1 top left
+2 6 bottom right
+4 2 bottom right
+6 4 bottom right

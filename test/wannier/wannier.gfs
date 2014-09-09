@@ -1,0 +1,98 @@
+# Title: Creeping Couette flow between eccentric cylinders
+#
+# Description:
+#
+# This test case is similar to \ref{couette} but with eccentric
+# cylinders. While the concentric cylinders case can be reduced to a
+# one-dimensional equation in polar coordinates (the radial velocity
+# component vanishes), this is not the case for eccentric
+# cylinders. For this problem (also known as "journal bearing" flow),
+# an exact analytical solution in the limit of Stokes flows was
+# obtained by Wannier using conformal mapping \cite{wannier1950}.
+#
+# The result of a computation using embedded solid boundaries is
+# illustrated in Figure \ref{streamlines}. The inner cylinder is
+# rotating while the outer cylinder is fixed. Note the weak
+# recirculation in the top part of the gap.
+#
+# Figure \ref{convergence} illustrates the rate of convergence with
+# spatial resolution toward the analytical solution of Wannier.
+#
+# \begin{figure}[htbp]
+# \caption{\label{streamlines}Streamlines for Stokes flow between
+# eccentric cylinders.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{streamlines.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{convergence}Convergence of the maximum and RMS
+# errors on velocity magnitude toward the analytical solution.}
+# \begin{center}
+# \includegraphics[width=\hsize]{convergence.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh wannier.sh wannier.gfs
+# Version: 111108
+# Required files: wannier.c wannier.sh error.ref streamlines.gfv
+# Running time: 1 minute
+# Generated files: convergence.eps streamlines.eps
+
+# The strange choices for radii R1,R2 and eccentricity ECC come from
+# the 'bipolar' variant
+Define R1 (1./sinh(1.5))
+Define R2 (1./sinh(1.))
+Define X1 (1./tanh(1.5))
+Define X2 (1./tanh(1.))
+Define ECC (X2 - X1)
+
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+  PhysicalParams { L = 2.5 }
+  # Upper bound on time, it should converge much before this
+  Time { end = 100 }
+  Refine LEVEL
+  Solid (- ellipse (0.,ECC,R2,R2))
+  Solid (ellipse (0.,0.,R1,R1))
+  ApproxProjectionParams { tolerance = 1e-6 }
+  AdvectionParams { scheme = none }
+  SourceViscosity 1
+  # Fixed outer cylinder and rotating inner cylinder (tangential velocity unity)
+  SurfaceBc U Dirichlet (x*x + y*y > 1.5*R1*R1 ? 0. : - ay/R1)
+  SurfaceBc V Dirichlet (x*x + y*y > 1.5*R1*R1 ? 0. :   ax/R1)
+  # Stop when stationnary
+  EventStop { step = 1e-2 } U 1e-4 DU
+
+  Global {
+      #include "wannier.c"
+      double psi (double x, double y) {
+	  double p, u, v;
+	  psiuv (x, y, R1, R2, ECC, 1., 0., &u, &v, &p);
+	  return p;
+      }
+      double ux (double x, double y) {
+	  double p, u, v;
+	  psiuv (x, y, R1, R2, ECC, 1., 0., &u, &v, &p);
+	  return u;
+      }
+      double uy (double x, double y) {
+	  double p, u, v;
+	  psiuv (x, y, R1, R2, ECC, 1., 0., &u, &v, &p);
+	  return v;
+      }
+  }
+
+  OutputScalarNorm { istep = 1 } du { v = DU }
+  OutputErrorNorm { start = end } { awk '{ print LEVEL,$5,$7,$9 }' } { v = Velocity } {
+      s = {
+	  double p, u, v;
+	  psiuv (x, y - ECC, R1, R2, ECC, 1., 0., &u, &v, &p);
+	  return sqrt (u*u + v*v);
+      }
+      v = EU
+  }
+  OutputSimulation { start = end } end-LEVEL.gfs
+}
+GfsBox {}

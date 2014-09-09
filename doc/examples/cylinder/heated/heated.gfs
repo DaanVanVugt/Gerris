@@ -1,0 +1,114 @@
+# Title: Vortex street around a "heated" cylinder
+#
+# Description:
+#
+# Same as the previous example but this time the tracer is "passive
+# temperature" (i.e. the change in density due to heating is assumed to be
+# negligible).
+#
+# This is an example on how to solve an advection--diffusion equation
+# for a tracer with Dirichlet boundary conditions on an immersed solid
+# boundary.
+#
+# \begin{figure}[htbp]
+# \caption{\label{tracer}MPEG movie of the tracer field.}
+# \begin{center}
+# \htmladdnormallinkfoot{\includegraphics[width=\hsize]{t.eps}}{t.mpg}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: gerris2D heated.gfs
+# Version: 1.1.0
+# Required files:
+# Running time: 22 minutes
+# Generated files: t.mpg t.eps
+#
+# The simulation domain has 8 GfsBox linked by 7 GfsGEdge
+8 7 GfsSimulation GfsBox GfsGEdge {} {
+
+  # Stop the simulation at t = 15
+  Time { end = 15 }
+
+  # Use an initial refinement of 6 levels (i.e. 2^6=64x64 for each box)
+  Refine 6
+
+  # Insert the solid boundary defined as x*x + y*y - 0.0625*0.0625 = 0
+  # (i.e. a cylinder of radius 0.0625 centered on the origin)
+  Solid (x*x + y*y - 0.0625*0.0625)
+
+  # Add a passive tracer called T
+  VariableTracer {} T
+
+   # Add diffusion to tracer T
+  SourceDiffusion {} T 0.001
+
+  # Dirichlet boundary condition for T on the cylinder
+  SurfaceBc T Dirichlet 1
+
+  # Set the initial x-component of the velocity to 1
+  Init {} { U = 1 }
+
+  # Adapt the mesh using the vorticity criterion at every timestep
+  # down to a maximum level of 6 and with a maximum tolerance of 1e-2
+  AdaptVorticity { istep = 1 } { maxlevel = 6 cmax = 1e-2 }
+
+  # Adapt the mesh using the gradient criterion on variable T at
+  # every timestep, down to a maximum level of 6 and with a maximum tolerance of 1e-2
+  AdaptGradient { istep = 1 } { maxlevel = 6 cmax = 1e-2 } T
+
+  # Set a viscosity source term on the velocity vector with x-component U
+  # The Reynolds number is Re = D*U/Nu = 0.125*1/0.00078125 = 160
+  # where D is the cylinder diameter (as defined in cylinder.gts)
+  SourceDiffusion {} U 0.00078125
+  SourceDiffusion {} V 0.00078125
+
+  # Writes the time and timestep every 10 timesteps on standard error
+  OutputTime { istep = 10 } stderr
+
+  # Writes the simulation size every 10 timesteps on standard error
+  OutputBalance { istep = 10 } stderr
+
+  # Writes info about the convergence of the Poisson solver on standard error
+  OutputProjectionStats { istep = 10 } stderr
+
+  # Pipes a bitmap PPM image representation of the T field at every other timestep
+  # into a conversion pipeline to create a MPEG movie called t.mpg
+  # Sets the minimum used for colormapping to 0 and the maximum to 0.4
+  OutputPPM { istep = 2 } { ppm2mpeg > t.mpg } {
+    min = 0 max = 0.4 v = T
+  }
+
+  # Pipes a bitmap PPM image representation of the T field at time 15
+  # into the ImageMagick converter "convert" to create the corresponding EPS file
+  OutputPPM { start = 15 } { convert -colors 256 ppm:- t.eps } {
+    min = 0 max = 0.4 v = T
+  }
+
+  # Outputs profiling information at the end of the simulation to standard error
+  OutputTiming { start = end } stderr
+
+}
+GfsBox {
+  # Left boundary on the leftmost box is:
+  #   Dirichlet U=1 for the x-component of the velocity
+  left = Boundary {
+    BcDirichlet U 1
+  }
+}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+# Right boundary on the rightmost box is outflow
+GfsBox { right = BoundaryOutflow }
+# All the boxes are linked by left to right links
+1 2 right
+2 3 right
+3 4 right
+4 5 right
+5 6 right
+6 7 right
+7 8 right

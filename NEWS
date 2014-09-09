@@ -1,0 +1,284 @@
+03/04/2006: Release 0.9.2
+
+The most significant improvements in this release are:
+
+- Important bug fixes and improvements for the multilevel Poisson
+  solver can reduce the overall computational cost by a factor of five
+  or more depending on the problem.
+- Variable mesh resolution along solid boundaries is now allowed and
+  has been well tested (note however that time-adaptive variable
+  resolution is not allowed on solid boundaries yet).
+- The robustness of the solution procedure has been much improved in
+  the case of very complex solid boundaries.
+
+Other improvements include:
+
+- Debian package snapshots.
+- Adaptive refinement of VOF-advected tracers.
+- Preliminary implementation of CSF surface tension using Renardy et
+  al. "proper discretisation".
+- Solid boundaries can be refined according to the local curvature.
+- Implicit Coriolis terms work with the Navier-Stokes solver.
+- Support for "thin" 3D domains.
+
+Bug fixes:
+
+- Several bug fixes for special cases of solid boundaries.
+- Bug fixes for "GfsAdapt" events.
+
+17/10/2005: Release 0.8.0
+
+Quite a lot of important new features and bug fixes in this release. I
+will just give a summary below, the ChangeLog has all the details.
+
+- Variable density Navier-Stokes is back (but still needs more
+testing). Have a look at the new Rayleigh-Taylor example.
+
+- Solid fractions of embedded boundaries are computed using a new
+algorithm. This algorithm does not attempt to compute exact volume
+fractions (as was done before using the boolean operations of GTS) but
+is at least second-order accurate (which is enough). Consequently it
+is much faster (approx. 20 times) and also much more robust. It can
+tolerate some degeneracy in surfaces, as well as non-closed surfaces
+(with cracks etc...).
+
+- Embedded boundaries can now have a variable resolution, but this
+needs more testing. They cannot be adaptively refined yet, however.
+
+- The linearised shallow-water 2D ocean model has been tested for
+prediction of tides around New Zealand (see the paper by Rym Msadek
+in the bibliography section).
+
+- Volume-of-fluid Continuum-Surface-Stresses (CSS) formulation and
+associated tests (spurious currents, capillary waves...). Only 2D for now.
+
+- GfsFunction can use model variables (have a look at the Boussinesq
+example). Complex source terms can be defined directly in the
+parameter file.
+
+- The dynamic allocation of variables has been restructured. There is
+no "pre-allocated" or static variables anymore. Everything is
+dynamic. Temporary variables are also dynamically allocated and
+freed. This eliminates implicit dependencies between different
+routines relying on the same temporary variables. Not surprisingly,
+several bugs were uncovered when this was implemented (i.e. "routines
+stepping on each others toes").
+
+- After a full review, the Poisson solver has been improved
+slightly. Some pathological now converge (see the thin-wall test
+case).
+
+- Support for variable viscosity in the diffusion solver can be used
+to solve for non-Newtonian fluids (including LES turbulence viscosity
+models). This works even for very stiff material laws (e.g. Bingham
+fluids).
+
+- The diffusion solver can be tuned from semi-implicit to fully
+implicit. This is useful for Stokes flows and/or non-Newtonian fluids.
+
+- Switched to darcs for version control (after a short period of
+trying to use arch). Darcs is very nice.
+
+- An automated test suite is ran automatically every night (if the
+code changes).
+
+- Examples and associated Latex and HTML documentation can be
+generated easily. Several examples are included on the web
+site. Contributed examples from users should be easy (see the last
+section of the examples page for details).
+
+- A FAQ has been added. Feel free to send corrections and additions.
+
+- Snapshots are generated only if the test suite passes.
+
+Minor changes and improvements:
+
+- OutputSimulation uses binary format by default.
+
+- GfsFunction can use C statements (instead of full functions).
+
+- New objects to compute online histograms (OutputScalarHistogram) and
+perform harmonic analysis (EventHarmonic).
+
+- Several MacOSX specific fixes.
+
+20/10/2004: Release 0.6.0
+
+First the good news:
+
+Diffusion equations with complex boundary conditions can now be solved
+in 3D!
+
+Now the bad news:
+
+Variable density support is broken in this version (use 0.3.0 if you
+need it). The reason is that this part of the code needs to be
+reviewed/generalised to make sure it does the right thing.
+
+The main changes/improvements in this version are:
+
+- Support for diffusion equations in 3D complex geometries
+- Flexible boundary conditions on embedded solid surfaces for
+  diffusion equation in parameter files (see the tutorial)
+- Updated tutorial and reference manual
+- An initial implementation of a shallow-water 2D and 3D hydrostatic
+  ocean model with semi-implicit Coriolis source terms and barotropic
+  equation (multigrid for Helmoltz equation)
+- Support for different types of simulations (ocean and incompressible
+  Euler/NS for the moment)
+- Support for multiple tracers
+- Much improved interpolation of variables
+- New consistent pressure correction formulation (which works with
+  momentum source terms near boundaries)
+- MPI configuration reworked (uses mpicc): tested with mpich and
+  lam-mpi
+- Bounding boxes for PPM output: allows to select a limited area for
+  PPM output
+- Optional binary file format (4 to 5 times faster file read)
+
+Minor bug corrections and improvements:
+
+- pkgconfig support
+- MacOSX support
+- Bug fix for 64 bits machines
+- Relaxed constraints on refinement (still needs work)
+- External library links in GfsFunction
+- Short keyword support
+- Lambda2 criterion of Jeong and Hussain (for vortex detection)
+- etc...
+
+20/05/2004: Release 0.3.0
+
+Quite a lot has happened since 0.2.0. The main changes/improvements are:
+
+- On systems supporting dynamic linking, functions of space and time
+can be used instead of constants for most objects which require a
+numerical argument. This is particularly useful for initialisation
+(each field can be set using functions of space and time) where almost
+any mathematical description of the initial conditions can be written
+directly in the parameter file (no need to create a custom module
+etc...). The same mechanism can also be used to define the initial
+refinement of the grid (i.e. specify the mesh density as a
+mathematical function directly in the parameter file) or variable
+source terms.
+
+- The boundary condition subsystem has been entirely revamped. It is
+now possible to define complex boundary conditions by combining
+independent boundary conditions (Dirichlet, Neumann etc...) for each
+variable. Dynamic functions can be used within this framework which
+allows for variable in space (e.g. profiles) and in time boundary
+conditions.
+
+- The code now includes a multigrid semi-implicit diffusion solver. It
+can work together with embedded solid boundaries in 2D but not yet in
+3D. It is possible to accurately specify the boundary conditions
+(Dirichlet or Neumann) for the diffused variable on the solid
+boundaries. All this allows for the solution of advection-diffusion
+equations such as incompressible Navier-Stokes. Due to the stability
+of the semi-implicit scheme it is also possible to solve pure Stokes
+flows with no restriction on the time step.
+
+- The adaptive engine has been rewritten. It is now possible to
+control the maximum size of the simulation. When this maximum size is
+reached, the algorithm will optimally distribute this maximum number
+of cells so that the adaptive criterion is minimized.
+
+- Note that the parameter file arguments of several objects have
+changed (GfsAdapt in particular), so that full parameter file
+compatibility with 0.2.0 is not guaranteed.
+
+- Volume of Fluid or standard Godunov advection schemes can now be
+selected in parameter files.
+
+- New object outputs the pressure and viscous forces exerted on the
+embedded solid boundary.
+
+- The pressure is now properly scaled.
+
+- Plus a large number of bug fixes, small improvements etc...
+
+Have a look at the ChangeLog for details.
+
+08/01/2003: Release 0.2.0
+
+This new release of Gerris includes a number of new features as well
+as some major code restructuring. 
+
+The GTS library version 0.7.1 is required. It includes major
+improvements for boolean operations between surfaces which greatly
+improve the robustness of the treatment of solid boundaries within
+Gerris.
+
+The major changes are listed below. For a detailed summary see the
+ChangeLog.
+
+New features:
+
+- Support for the variable density incompressible Euler equations.
+
+- Support for user-defined source terms for any variable. Gaussian
+  tracer source terms and constant source terms (e.g. acceleration of
+  gravity in momentum equation) are provided.
+
+- Base domain does not have to be cubic anymore. Independent length
+  scales can be provided for each dimension.
+
+- Module for OpenDX allowing direct import of Gerris simulation files.
+
+- Updated documentation and tutorial: section about user-defined
+  extension modules for initial conditions.
+
+- Support for dynamic allocation of additional cell variables
+  i.e. extension modules can dynamically add additional variables if
+  needed.
+
+- Automatic compilation and installation of 2D and 3D versions. 
+
+- Preliminary implementation of a second-order Volume Of Fluid (VOF)
+  advection scheme.
+
+- A new GfsAdaptNotBox class can be used to specify parts of the
+  domain which do not need to be refined. This is particularly useful
+  for implementing absorbing outflow conditions.
+
+Improvements and restructuring:
+
+- Improved adaptive refinement algorithm.
+
+- Restructuring of the test suite.
+
+19/06/2002: Release 0.1.0
+
+Hi all,
+
+I am glad to announce the first "official" release of Gerris.
+
+It needs the latest version of GTS (0.6.0) to compile.
+
+A major change since last month is the addition of "dynamic adaptive
+mesh refinement" i.e. the distribution of cells changes according to
+what is happening to the solution. Have a look at the gallery on the
+web site for a graphical illustration.
+
+here:
+
+http://gfs.sourceforge.net/gallery.html
+
+and here (at the bottom of the page):
+
+http://gfs.sourceforge.net/tangaroa.html
+
+I also wrote a short tutorial which should help you get started with
+the code (available online and in the distribution in doc/tutorial).
+
+http://gfs.sourceforge.net/tutorial/tutorial1.html
+
+Any feedback is of course welcome,
+
+Enjoy,
+
+Stephane
+
+11/12/2001: Inital CVS checkin
+01/08/2001: Initial setup
+ LocalWords:  GfsAdaptNotBox

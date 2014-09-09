@@ -1,0 +1,50 @@
+.TH bat2gts 1 "August 9, 2008" "" "User Commands"
+
+.SH NAME
+bat2gts \- takes a bathymetry file (three columns: longitude, latitude (degree), depth (meters)) and generates a GTS depth file for the given domain.
+
+.SH SYNOPSIS
+.B bat2gts
+.RI [OPTIONS] < BATHY
+.SH DESCRIPTION
+This manual page documents briefly the
+.B bat2gts
+command.
+
+.SH OPTIONS
+These programs follow the usual GNU command line syntax, with long
+options starting with two dashes (`-').
+A summary of options is included below.
+.TP
+.B \-\-long=V
+Set reference longitude to V (default 174 deg)
+.TP
+.B \-\-lat=V
+Set reference latitude  to V (default \-41 deg)
+.TP
+.B \-\-width=V
+Set domain width (default is 500 km)
+.TP
+.B \-\-depth=V
+Set reference depth to V (default is 5000 meters)
+.TP
+.B \-\-coast=V
+Set coastline reference depth to V (default is 0.1 meters)
+.TP
+.B \-\-rel=T
+Set relative error allowed on bathymetry (default is 0.05)
+.TP
+.B \-\-angle=V
+Rotation of V degrees (default is 0)
+.TP
+.B \-v, \-\-verbose
+Display info about the process
+.TP
+.B \-h, \-\-help
+Display the help and exit.
+
+.SH AUTHOR
+bat2gts was written by Stephane Popinet <s.popinet@niwa.co.nz>.
+.PP
+This manual page was written by Ruben Molina <rmolina@udea.edu.co>,
+for the Debian project (but may be used by others).

@@ -1,0 +1,61 @@
+# Title: Coalescence of a pair of Gaussian vortices (Gerris logo)
+#
+# Description:
+#
+# This example generates the Gerris desktop logo (Figure \ref{logo}).
+#
+# A pair of Gaussian vortices slowly merge. This is the primary
+# mechanism controlling the evolution of two-dimensional turbulence
+# and consequently has been studied in some detail.
+#
+# \begin{figure}[htbp]
+# \caption{\label{logo}Gerris logo and animation.}
+# \begin{center}
+# \htmladdnormallinkfoot{\includegraphics[width=0.15\hsize]{logo.eps}}{logo.mpg}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: gerris2D logo.gfs | gfsview2D logo.gfv
+# Required files: logo.gfv
+# Version: 100317
+# Running time: 5 minutes
+# Generated files: logo.mpg logo.png logo.eps
+#
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+    Time { end = 4 }
+    Refine 6
+    # Initialise a vorticity field given by two gaussian distributions
+    InitVorticity {} {
+        /* We use nested functions for simplicity (this will not work on MACOSX) */
+        double vortex (double xc, double yc, double r) {
+            double r2 = (x - xc)*(x - xc) + (y - yc)*(y - yc);
+            return 2.*M_PI*exp (- 2.*r2/(r*r));
+        }
+        double r = 0.01, theta = 30.*M_PI/180.;
+        return vortex (-r*sin(theta), r*cos(theta), 0.01) + 
+               vortex (r*sin(theta), -r*cos(theta), 0.01);
+    }
+    AdaptVorticity { istep = 1 } { cmax = 1e-2 maxlevel = 12 minlevel = 6 }
+    OutputTime { istep = 1 } stderr
+    OutputProjectionStats { istep = 1 } stderr
+    OutputSimulation { istep = 10 } stdout
+    OutputPPM { istep = 2 } { ppm2mpeg > logo.mpg } {
+        v = Vorticity
+        min = -0.1348 max = 6.22219
+        # Only generate the movie in a small box centered on the
+	# origin. We also need to make sure that box size is a multiple
+	# of 1./64. so that the PPM image size stays constant (ffmpeg
+	# crashes on variable image sizes).
+        condition = (Level < 6 || 
+                     (x >= -3./128. && x <= 3./128. && y >= -3./128. && y <= 3./128.))
+    }
+    EventScript { start = end } {
+        echo "Save logo.ppm { width = 1024 height = 1024 }"
+        sleep 5 # to wait for GfsView to finish writing the image
+        convert -transparent "#0000FF" logo.ppm -geometry 156x156 logo.png
+        montage -background white -geometry +0+0 logo.png logo.eps
+        rm -f logo.ppm
+    }
+}
+GfsBox {}

@@ -1,0 +1,20 @@
+# Title: Poisson solution in a dumbbell-shaped domain
+#
+# Description:
+#
+# Domains with a dumbbell topology can trigger an instability in the
+# Poisson solver if care is not taken.
+#
+# Author: St\'ephane Popinet
+# Command: sh dumbell.sh
+# Version: 0.9.3
+# Required files: dumbell.sh
+#
+1 0 GfsPoisson GfsBox GfsGEdge {} {
+  Refine 3
+  ApproxProjectionParams { nitermax = 1000 minlevel = 1 tolerance = 1e-30 }
+  Solid dumbell.gts
+  Init {} { Div = y }
+  OutputProjectionStats { istep = 1 } stdout
+}
+GfsBox {}

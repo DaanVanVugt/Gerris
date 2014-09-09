@@ -1,0 +1,116 @@
+# Title: Parabolic container with embedded solid
+#
+# Description:
+#
+# Same test case but with a slightly-inclined, narrow channel defined
+# using embedded solid boundaries.
+#
+# See also \cite{an2012} for details.
+#
+# \begin{figure}[htbp]
+# \caption{\label{u0}Time evolution of the (spatially constant)
+# horizontal velocity. Seven levels of refinement.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{u0.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{convergence}Evolution of the relative elevation
+# error norms as functions of resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{convergence.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{convergence-u}Evolution of the relative velocity error
+# L2-norm as a function of resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{convergence-u.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: Hyunuk An, Soonyoung Yu and St\'ephane Popinet
+# Command: sh ../parabola.sh solid.gfs
+# Version: 120314
+# Required files: error.ref
+# Generated files: u0.eps convergence.eps convergence-u.eps
+#
+Define h0 10.
+Define a 3000.
+Define tau 1e-3
+Define B 5
+Define G 9.81
+Define SLOPE (0.3/pow(2., LEVEL))
+Define ANGLE (atan(SLOPE))
+Define R(x,y) ((x)*cos(ANGLE) + (y)*sin(ANGLE))
+
+1 0 GfsRiver GfsBox GfsGEdge {} {
+
+    # Analytical solution, see Sampson, Easton, Singh, 2006
+    Global {
+	static gdouble Psi (double x, double y, double t) {
+	    double p = sqrt (8.*G*h0)/a;
+	    double s = sqrt (p*p - tau*tau)/2.;
+	    return a*a*B*B*exp (-tau*t)/(8.*G*G*h0)*(- s*tau*sin (2.*s*t) + 
+		(tau*tau/4. - s*s)*cos (2.*s*t)) - B*B*exp(-tau*t)/(4.*G) -
+	    exp (-tau*t/2.)/G*(B*s*cos (s*t) + tau*B/2.*sin (s*t))*R(x,y);
+	}
+    }
+    
+    PhysicalParams { L = 10000 }
+    Refine LEVEL
+    Solid ({
+	    double line1 = SLOPE*x - y + 28000./pow(2.,LEVEL);
+	    double line2 = - SLOPE*x + y + 28000./pow(2.,LEVEL);
+	    return union (line1, line2);
+	    })
+    Init {} {
+	Zb = h0*pow(R(x,y), 2.)/(a*a)
+	P = MAX (0., h0 + Psi (x, y, 0.) - Zb)
+    }
+    Init { istep = 1 } {
+	Pt = MAX (0., h0 + Psi (x, y, t) - Zb)
+    }
+    PhysicalParams { g = G }
+    SourceCoriolis 0 tau
+    Time { end = 6000 }
+    OutputSimulation { start = 1500 } { 
+	awk '
+        function atan(x)
+        {
+          return atan2(x,1.);
+        }
+        function pow(x,y)
+        {
+          return x**y;
+        }
+        {
+          if ($1 == "#")
+            print $0;
+          else {
+            printf ("%g", R($1,$2));
+            for (i = 2; i <= NF; i++)
+              printf (" %s", $i);
+            printf ("\n");
+          }
+        }' > sim-LEVEL-1500.txt 
+    } { format = text }
+    OutputSimulation { start = end } end-LEVEL.txt { format = text }
+    OutputScalarSum { istep = 10 } ke-LEVEL { v = (P > 0. ? U*U/P : 0.) }
+    OutputScalarSum { step = 50 } vol-LEVEL { v = P }
+    OutputScalarSum { step = 50 } U-LEVEL { v = U*cos (ANGLE) + V*sin(ANGLE) }
+    OutputErrorNorm { istep = 1 } error-LEVEL { v = P } {
+	s = Pt
+	v = DP
+    }
+} {
+    # this is necessary to obtain good convergence rates at high
+    # resolutions
+    dry = 1e-4
+}
+GfsBox {
+    left = Boundary
+    right = Boundary
+}

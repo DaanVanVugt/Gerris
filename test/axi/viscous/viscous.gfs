@@ -1,0 +1,100 @@
+# Title: Viscous flow past a sphere
+#
+# Description:
+#
+# When viscosity is added, a recirculation region develops behind the
+# sphere (Figure \ref{isolines}). 
+#
+# \begin{figure}[htbp]
+# \caption{\label{isolines}Viscous flow around a sphere at Reynolds
+# 100. Isolines of the velocity components ($x$ in red, $y$ in
+# blue). The recirculation region is indicated by the green isoline
+# where the value of the horizontal velocity component vanishes.}
+# \begin{center}
+# \includegraphics[width=\hsize]{isolines.eps}
+# \end{center}
+# \end{figure}
+#
+# The length of the recirculation depends on the Reynolds
+# number. Figure \ref{length} plots the results obtained with Gerris
+# as well as previously published results. Published results agree
+# with Gerris for Reynolds numbers smaller than 100. The mismatch for
+# results at Reynolds 200 can be attributed to the coarse mesh used to
+# resolve the wake in the studies of Fornberg \cite{fornberg1988} and
+# Fadlun et al \cite{fadlun2000}.
+#
+# \begin{figure}[htbp]
+# \caption{\label{length}Relative length of the recirculation region
+# as a function of the Reynolds number. The results of Gerris are
+# compared with the results of Masliyah \& Epstein
+# \cite{masliyah1970}, Fornberg \cite{fornberg1988}, Blanco \&
+# Magnaudet \cite{blanco1995}, Fadlun et al \cite{fadlun2000} and
+# Zhang \& Zheng \cite{zhang2007}.}
+# \begin{center}
+# \includegraphics[width=\hsize]{length.eps}
+# \end{center}
+# \end{figure}
+#
+# The pressure profiles are also in good agreement with those reported
+# by Fadlun et al (which also agree with those of Fornberg) (Figure
+# \ref{Cp}).
+#
+# \begin{figure}[htbp]
+# \caption{\label{Cp}Pressure coefficient over the sphere surface at
+# Reynolds numbers 100 and 200.}
+# \begin{center}
+# \includegraphics[width=\hsize]{Cp.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh viscous.sh
+# Version: 1.3.0
+# Required files: viscous.sh cp-12-200 fadlun fadlun-cp-100 fadlun-cp-200 Re-12 zhang blanco-1995 masliyah-1970 isolines.gfv fornberg
+# Generated files: length.eps Cp.eps isolines.eps
+#
+
+Define A0 0.5
+Define U0 1.
+
+1 0 GfsAxi GfsBox GfsGEdge {} {
+    Time { end = 100 }
+    PhysicalParams { L = 50 }
+    Refine 4
+    Refine (LEVEL + 1./50.*(x*x + y*y)*(4. - LEVEL))
+    Solid (ellipse (0., 0., A0, A0))
+    SourceViscosity 1./RE
+    Init {} { U = U0 }
+    AdaptGradient { istep = 1 } { cmax = 5e-2 maxlevel = LEVEL } U
+    AdaptGradient { istep = 1 } { cmax = 5e-2 maxlevel = LEVEL } V
+    AdaptFunction { istep = 1 } { cmax = 1e-2 maxlevel = LEVEL } {
+	return (fabs(dx("U"))+fabs(dy("U")))/fabs(U)*ftt_cell_size (cell);
+    }
+    EventStop { step = 0.1 } U 1e-3 DU
+
+#    OutputTime { step = 1 } stderr
+#    OutputScalarNorm { step = 1 } stderr { v = DU }
+    OutputSimulation { start = end } end-LEVEL-RE.gfs
+    OutputLocation { step = 0.1 } {
+	awk 'BEGIN { t = 2.; oldl = -1.; oldt = 0.; } {
+          if ($1 != t) { t = $1; x1 = $2; u1 = $7; }
+          else {
+            x2 = $2; u2 = $7;
+            if (u1 <= 0. && u2 > 0.) {
+              l = (u1*x2 - u2*x1)/(u1 - u2) - A0;
+              dl = (l - oldl)/(t - oldt);
+              print t, l, dl;
+              fflush (stdout);
+              oldl = l;
+              oldt = t;
+            }
+            x1 = x2; u1 = u2;
+          }
+        }' > l-LEVEL-RE
+    } axis
+}
+GfsBox {
+    left = Boundary { BcDirichlet U U0 }
+    right = BoundaryOutflow
+    bottom = Boundary
+}

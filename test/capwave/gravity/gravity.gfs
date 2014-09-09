@@ -1,0 +1,65 @@
+# Title: Pure gravity wave
+#
+# Description:
+#
+# Similar to the capillary wave test case but for a pure gravity
+# wave. The density ratio is 10. The dynamic viscosities are
+# identical.
+#
+# The time-evolution of the amplitude given by Prosperetti's theory
+# and Gerris ($64^2$) is given on Figure \ref{amplitude}.
+#
+# \begin{table}[htbp]
+# \caption{\label{convergence}Convergence of the relative error between the analytical
+# solution and simulation results.}
+# \begin{center}
+# \begin{tabular}{|l|ccccc|} \hline
+# Method & $8^2$ & $16^2$ & $32^2$ & $64^2$ & $128^2$ \\ \hline
+# \input{convergence.tex} & 0.00417707 \\
+# \end{tabular}
+# \end{center}
+# \end{table}
+#
+# \begin{figure}[htbp]
+# \caption{\label{amplitude}Evolution of the amplitude of the gravity wave as a
+# function of non-dimensional time $\tau=\omega_0 t$.}
+# \begin{center}
+# \includegraphics[width=\hsize]{amplitude.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh ../capwave.sh gravity.gfs
+# Version: 1.0.0
+# Required files: convergence.ref prosperetti
+# Generated files: convergence.tex amplitude.eps
+#
+1 1 GfsSimulation GfsBox GfsGEdge {} {
+  Time { end = 1.66481717925811447992 }
+  ApproxProjectionParams { tolerance = 1e-6 }
+  ProjectionParams { tolerance = 1e-6 }
+  Refine LEVEL
+  VariableTracerVOFHeight T
+
+  # Line below is for direct imposition of gravity acceleration
+  #  Source {} V 50
+
+  # It is better to use a formulation where the first-order
+  # hydrostatic pressure is substracted away (in particular it
+  # prevents the generation of "hydrostatic spurious currents")
+  VariablePosition {} Y T y
+
+  # acceleration of gravity is 50, the equivalent "reduced pressure"
+  # is 50*(1. - 0.1) = 45
+  SourceTension {} T 45 Y
+
+  SourceDiffusion {} U 0.0182571749236
+  SourceDiffusion {} V 0.0182571749236
+  PhysicalParams { alpha = 1./(T + 0.1*(1. - T)) }
+  InitFraction {} T (y - 0.01*cos (2.*M_PI*x))
+  OutputScalarNorm { step = .00225584983639310905 } {
+      awk '{printf ("%g %g\n", $3*16.032448313657, $9); fflush(stdout); }' > wave-LEVEL
+  } { v = (T > 1e-6 && T < 1. - 1e-6 ? Y : 0.) }
+}
+GfsBox {}
+1 1 right

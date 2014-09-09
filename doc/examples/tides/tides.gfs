@@ -1,0 +1,206 @@
+# Title: Lunar tides in Cook Strait, New Zealand
+# 
+# Description:
+#
+# The shallow-water equations are solved using the "ocean" version of
+# Gerris. The tidal elevations for the lunar (M2) component obtained
+# from a larger-area tidal model are imposed as conditions on
+# the boundaries of the domain.
+#
+# The comments in the \htmladdnormallinkfoot{tides.sh}{tides/tides.sh}
+# script describe how to generate the appropriate GTS files from the
+# tidal elevation and bathymetry data.
+#
+# After an initial transient ($t < \approx 1$ day) due to relaxation of
+# the model toward a state consistent with the mathematical model and
+# with the imposed boundary conditions, the model reaches a periodic
+# regime (Figure \ref{periodic}).
+#
+# \begin{figure}[htbp]
+# \caption{\label{periodic}Evolution of the maximum velocity and 
+# elevation with time.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{pv.eps}
+# \end{center}
+# \end{figure}
+#
+# Online harmonic decomposition can then be used to extract the
+# amplitudes and phases of the computed M2 tidal components. The
+# simulation stops automatically when convergence of the harmonic
+# decomposition is reached (Figure \ref{harmcon}).
+#
+# \begin{figure}[htbp]
+# \caption{\label{harmcon}Convergence of the maximum tidal amplitude 
+# (estimated from harmonic decomposition) with time.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{a0.eps}
+# \end{center}
+# \end{figure}
+#
+# The final tidal amplitudes and phases are illustrated in Figures
+# \ref{amplitude} and \ref{phase} respectively. The harmonic
+# decomposition is also applied to the velocity field. The results can
+# be represented as tidal ellipses (Figure \ref{ellipses}) and
+# residual currents (Figure \ref{residual}).
+#
+# Note that the results for this simulation will not be as good as
+# these described in Rym Msadek's \htmladdnormallinkfoot{technical
+# report}{http://gfs.sf.net/tides.pdf} because iterative Flather
+# conditions have not been applied. See the report for details.
+#
+# \begin{figure}[htbp]
+# \caption{\label{amplitude}Tidal amplitude estimated from the harmonic 
+# decomposition. Dark red is 1.4 metres, dark blue is 0.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{amplitude.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{phase}Tidal phase estimated from the harmonic 
+# decomposition. Dark red is 180 degrees, dark blue -180 degrees.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{phase.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{ellipses}Detail of tidal ellipses estimated from the harmonic 
+# decomposition coloured according to maximum current speed. Dark red
+# is 2 metres/sec, dark blue is zero.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{ellipses.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{residual}Detail of residual tidal currents estimated from the 
+# harmonic decomposition coloured according to residual current speed. 
+# Dark red is 0.6 metres/sec, dark blue is zero.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{residual.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh tides.sh
+# Version: 1.3.1
+# Required files: tides.sh bathymetry coefficients amplitude.gfv ellipses.gfv phase.gfv residual.gfv tides.gfv
+# Running time: 2 hours
+# Generated files: a0.eps amplitude.eps ellipses.eps phase.eps pv.eps residual.eps
+
+# M2 tidal frequency. The period is 12h25 (44700 seconds).
+Define M2F (2.*M_PI/44700.)
+
+# M2 tidal elevation
+Define M2(t) (A_amp*cos (M2F*t)+B_amp*sin (M2F*t))
+
+# Use the "GfsOcean" model
+1 0 GfsOcean GfsBox GfsGEdge {} {
+    # Set the timestep to sthg small compared to the tidal period
+    Time { dtmax = 100. }
+
+    # Set the box size to 500 km
+    PhysicalParams { L = 500e3 }
+
+    # Use cartographic projection module
+    GModule map
+
+    # Use a Lambert conformal conic projection centered on 174 degrees
+    # longitude and -40.8 degrees latitude. Rotate the domain 40
+    # degrees counter-clockwise.
+    MapProjection { lon = 174 lat = -40.8 angle = 40 }
+
+    # Refine to six levels
+    Refine 6
+
+    # We want more accuracy in the projection than the default 1e-3
+    ApproxProjectionParams { tolerance = 1e-6 nitermax = 10 }
+
+    # Initialise tidal amplitudes
+    Init {} {
+        A_amp = AM2.gts
+        B_amp = BM2.gts
+    }
+
+    # Bathymetry
+    Solid bath.gts
+
+    # Refine the coastline to 10 levels
+    RefineSurface 10 bath.gts { twod = 1 }
+
+    # Acceleration of gravity
+    PhysicalParams { g = 9.81 }
+
+    # Add Coriolis source term
+    SourceCoriolis -1e-4
+
+    # Bottom friction parameterisation:
+    # Quadratic drag with friction coefficient of 4e-4.
+    Init { istep = 1 } {
+        U = U/(1. + dt*Velocity*4e-4/H)
+        V = V/(1. + dt*Velocity*4e-4/H)
+    }
+
+    # Weak exponential filtering of the velocity field
+    #    EventFilter { istep = 1 } U 40000
+    #    EventFilter { istep = 1 } V 40000
+    
+    # After t=100000, starts on-the-fly harmonic decomposition of the pressure field...
+    EventHarmonic { start = 100000 istep = 10 } P A B Z EP M2F
+    # ... and of the velocity field
+    EventHarmonic { start = 100000 istep = 10 } U AU BU ZU EU M2F
+    EventHarmonic { start = 100000 istep = 10 } V AV BV ZV EV M2F
+
+    # After t=100000, stops the simulation if the variations of the A0
+    # harmonic component are less than 0.025 in 100 timesteps.
+    EventStop { start = 100000 istep = 100 } A0 0.025
+
+    OutputTime { istep = 1 } stderr
+    OutputProjectionStats { istep = 1 } stderr
+
+    # Output solution on standard output every 20 timesteps
+    # for on-the-fly visualisation with GfsView.
+    # Do not include the GTS file for the embedded surface to save bandwidth.
+    OutputSimulation { istep = 20 } stdout { solid = 0 }
+
+    # Output solution in file 'end.gfs' at the end of the simulation
+    OutputSimulation { start = end } end.gfs
+
+    # Output curves using gnuplot
+    EventScript { start = end } {
+        cat <<EOF | gnuplot
+        set term postscript eps lw 3 solid 20 colour
+        set output 'pv.eps'
+        set xlabel 'Time (days)'
+        set ylabel 'Elevation (metres) or Velocity (metres/s)'
+        plot 'p' u (\$3/86400.):(\$9/9.81) w l t "Elevation", \
+             'u' u (\$3/86400.):9 w l t "Velocity"
+        set output 'a0.eps'
+        set ylabel 'Maximum harmonic elevation (metres)'
+        plot [1:]'a0' u (\$3/86400.):(\$9/9.81) w l t ""
+EOF
+    }
+
+    OutputScalarNorm { istep = 1 } p { v = P }
+    OutputScalarNorm { istep = 1 } u { v = Velocity }
+    OutputScalarNorm { istep = 10 } a0 { v = sqrt(A0*A0 + B0*B0) }
+}
+GfsBox {
+    # Use Flather boundary conditions on all boundaries
+    left = Boundary {
+        BcFlather U 0 H P M2(t)
+    }
+    right = Boundary {
+        BcFlather U 0 H P M2(t)
+    }
+    top = Boundary {
+        BcFlather V 0 H P M2(t)
+    }
+    bottom = Boundary {
+        BcFlather V 0 H P M2(t)
+    }
+
+    # This is required for consistent free-surface fluxes
+    front = Boundary
+}

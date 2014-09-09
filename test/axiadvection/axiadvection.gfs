@@ -1,0 +1,53 @@
+# Title: Mass conservation
+#
+# Description:
+#
+# A standard and a VOF tracer are advected by an axisymmetric
+# flow. The initial interface is a torus which is then advected by the
+# flow illustrated in Figure \ref{vof}. As the torus is flattened
+# against the right-hand-side wall, its cross-sectional surface area
+# decreases but the volume should remain constant. This is indeed the
+# case to within 0.04\% for the VOF tracer and $1.5\times 10^{-5}$\% for
+# the standard tracer.
+#
+# \begin{figure}[htbp]
+# \caption{\label{vof}VOF interface (red) and velocity field (green).}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{vof.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh axi.sh
+# Version: 1.3.0
+# Required files: axi.sh vectors.gfv vof.gfv
+# Generated files: vof.eps
+#
+1 0 GfsAxi GfsBox GfsGEdge {} {
+    Time { end = 1.3 }
+    Refine 6
+    Init {} { U = 1 }
+    VariableTracerVOF T
+    VariableTracer T1
+    InitFraction T (- ellipse (0, 0.3, 0.1, 0.1))
+    InitFraction T1 (- ellipse (0, 0.3, 0.1, 0.1))
+    AdaptGradient { istep = 1 } { cmax = 1e-3 minlevel = 4 maxlevel = (x < 0.25 ? 6 : 7) } T1
+    OutputScalarSum { istep = 1 end = 0.8 } srt { v = T }
+    OutputScalarSum { istep = 1 end = 0.8 } srt1 { v = T1 }
+    OutputSimulation { step = 0.2 } stdout
+    EventScript { step = 0.2 } {
+	echo "Save stdout { format = Gnuplot }"
+    }
+    EventScript { start = 1.2 } {
+	echo "Clear"
+	cat vectors.gfv
+	echo "Save vectors.gnu { format = Gnuplot }"
+    }
+}
+GfsBox {
+    left = Boundary {
+	BcDirichlet U 1
+	BcDirichlet V 0
+    }
+    top = BoundaryOutflow
+}

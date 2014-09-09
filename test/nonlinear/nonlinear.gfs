@@ -1,0 +1,104 @@
+# Title: Non-linear geostrophic adjustment
+#
+# Description:
+#
+# For a circular vortex defined by a tangential velocity
+# $u_\theta(r)$, the radial height/pressure profile is a solution of
+# $$h'_0(r)={u_\theta\over g}\left(2\Omega + {u_\theta\over r}\right)$$
+# with $\Omega$ the angular velocity. For this test case we take
+# $$u_\theta(r)=(r < 0.4)\epsilon(1+\cos(\pi(r-0.2)/0.2))/2$$
+#
+# The control parameters are the Froude number $U/\sqrt{gH}$ and the
+# Rossby number $Ro=U/\Omega L$. We set the Froude number to 0.1 and
+# consider Rossby numbers 0.1 and $\infty$ (no rotation). In the case
+# without rotation the errors reflect only the accuracy of the
+# momentum advection terms. With rotation, the errors also depend on
+# the accuracy of the discretisation of the geostrophic balance.
+#
+# Figure \ref{error} illustrate the evolution of the errors on free
+# surface height/pressure for the different solvers, with and without
+# rotation.
+#
+# \begin{figure}[htbp]
+# \caption{\label{error}Evolution of the maximum relative error on
+# free-surface height. (a) $Ro=\infty$, (b) $Ro=0.1$.}
+# \begin{center}
+# \begin{tabular}{cc}
+# \includegraphics[width=0.45\hsize]{error-0.eps} &
+# \includegraphics[width=0.45\hsize]{error-1.eps} \\
+#   (a) & (b)
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# Figure \ref{error-distribution} display the error distributions at $t=5$.
+#
+# \begin{figure}[htbp]
+
+# \caption{\label{error-distribution}Error distribution at $t=5$. Top
+# row: $Ro=\infty$, bottom row: $Ro=0.1$.}
+# \begin{center}
+# \begin{tabular}{ccc}
+# incompressible & linearised free-surface & Saint-Venant \\
+# \includegraphics[width=0.33\hsize]{end-0.eps} &
+# \includegraphics[width=0.33\hsize]{end-ocean-0.eps} &
+# \includegraphics[width=0.33\hsize]{end-river-0.eps} \\
+# \includegraphics[width=0.33\hsize]{end-1.eps} &
+# \includegraphics[width=0.33\hsize]{end-ocean-1.eps} &
+# \includegraphics[width=0.33\hsize]{end-river-1.eps} 
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh nonlinear.sh
+# Version: 120814
+# Required files: nonlinear.sh river.gfs ocean.gfs error.gfv error-ocean.gfv error-1.ref error-ocean-1.ref error-river-1.ref
+# Running time: 5 minutes
+# Generated files: end-0.eps end-ocean-0.eps end-river-0.eps end-1.eps end-ocean-1.eps end-river-1.eps error-0.eps error-1.eps
+#
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+  Time { end = 5 dtmax = 1e-2 }
+  PhysicalParams { L = 1 }
+  Global {
+      #include <gsl/gsl_integration.h>
+      @link -lgsl -lgslcblas
+      
+      #define G 1.
+      #define FROUDE 0.1
+
+      double vtheta (double r) {
+	  return FROUDE*(r < 0.4)*(1. + cos((r - 0.2)/0.2*M_PI))/2.;
+      }
+      double h0p (double r, void * p) {
+	  double vt = vtheta(r);
+	  return vt*(2.*OMEGA + vt/r)/G;
+      }
+      double h0 (double r) {
+	  gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
+	  double result, error;
+	  gsl_function F;
+	  F.function = &h0p;
+	  gsl_integration_qags (&F, 0, r, 0, 1e-7, 1000, w, &result, &error);
+	  gsl_integration_workspace_free (w);
+	  return result;
+      }
+  }
+  SourceCoriolis 2.*OMEGA
+  Init {} {
+      U = - vtheta(sqrt (x*x + y*y))*y/sqrt (x*x + y*y)
+      V = vtheta(sqrt (x*x + y*y))*x/sqrt (x*x + y*y)
+  }
+  ApproxProjectionParams { tolerance = 1e-9 }
+  ProjectionParams { tolerance = 1e-9 }
+  Refine 6
+  OutputScalarSum { istep = 1 } energy-OMEGA { v = Velocity2 }
+  OutputErrorNorm { istep = 1 } error-OMEGA { v = P } {
+      s = h0(sqrt (x*x + y*y)) 
+      v = E
+      unbiased = 1 
+      relative = 1
+  }
+  OutputSimulation { start = end } end-OMEGA.gfs
+}
+GfsBox {}

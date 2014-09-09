@@ -1,0 +1,53 @@
+1 0 GfsRiver GfsBox GfsGEdge {} {
+  Time { end = 5 dtmax = 1e-2 }
+  Global {
+      #include <gsl/gsl_integration.h>
+      @link -lgsl -lgslcblas
+      
+      #define G 1.
+      #define H0 1.
+      #define FROUDE 0.1
+
+      double vtheta (double r) {
+	  return FROUDE*(r < 0.4)*(1. + cos((r - 0.2)/0.2*M_PI))/2.;
+      }
+      double h0p (double r, void * p) {
+	  double vt = vtheta(r);
+	  return vt*(2.*OMEGA + vt/r)/G;
+      }
+      double h0 (double r) {
+	  gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
+	  double result, error;
+	  gsl_function F;
+	  F.function = &h0p;
+	  gsl_integration_qags (&F, 0, r, 0, 1e-7, 1000, w, &result, &error);
+	  gsl_integration_workspace_free (w);
+	  return result;
+      }
+  }
+  PhysicalParams { L = 1 g = G }
+  AdvectionParams { gradient = gfs_center_gradient }
+  SourceCoriolis 2.*OMEGA
+  Init {} {
+      P = (H0 + h0(sqrt (x*x + y*y)))
+      U = - vtheta(sqrt (x*x + y*y))*y/sqrt (x*x + y*y)*P
+      V = vtheta(sqrt (x*x + y*y))*x/sqrt (x*x + y*y)*P
+  }
+  Refine 6
+  OutputScalarSum { istep = 1 } energy-river-OMEGA { 
+      v = (P*Velocity2 + G*(H - H0)*(H - H0))/2. 
+  }
+  OutputErrorNorm { istep = 1 } error-river-OMEGA { v = P } {
+      s = h0(sqrt (x*x + y*y))
+      v = E
+      unbiased = 1 
+      relative = 1
+  }
+  OutputSimulation { start = end } end-river-OMEGA.gfs
+}
+GfsBox {
+    top = Boundary
+    bottom = Boundary
+    right = Boundary
+    left = Boundary
+}

@@ -1,0 +1,77 @@
+# Title: Wingtip vortices behind a rectangular NACA 2414 wing
+#
+# Description:
+#
+# According to Wikipedia
+# \url{http://en.wikipedia.org/wiki/Wingtip_vortices}{`Wingtip
+# vortices'} \begin{quotation}are tubes of circulating air which are
+# left behind a wing as it generates lift.  One wingtip vortex
+# trails from the tip of each wing. The cores of vortices spin at very
+# high speed and are regions of very low pressure.\end{quotation}
+#
+# Vortex-lines cannot end in fluid (Milne-Thomson \cite{milne1973} 1973, p. 168); in
+# three dimensions, the starting vortex shed by the trailing edge on
+# take-off remains joined to the wing by counterrotating wingtip
+# vortices, which are associated with the escape of air from the
+# underside to above via the wingtips, following the negative pressure
+# difference from below to above which must be present if the wing is
+# generating lift.
+#
+# This vortex-line consisting of the starting vortex and pair of
+# wingtip vortices is notionally continued and closed by the `bound
+# vortex' inside the wing, associated with the circulation around the
+# wing, and proportional to its lift in accordance with the
+# Kutta--Joukowsky theorem.
+#
+# As the flow over the wing evolves from start-up to steady-state, the
+# starting vortex recedes and the wing-tip vortices extend back to
+# infinity.  For sketches of this `horseshoe vortex' system (Glauert
+# \cite{glauert1926} p. 130; Milne-Thompson \cite{milne1973} p. 172),
+# see, e.g. Glauert (\cite{glauert1926} Figure 80, p. 131), Hanson
+# \cite{hanson1970} (1970, Figure 2, p. 268) or Milne-Thomson
+# \cite{milne1973} (1973, Figure 10-41, p. 186).
+#
+# \begin{figure}[htbp]
+# \caption{\label{movie}Wingtip vortices behind a rectangular NACA 2414 wing.}
+# \begin{center}
+# \htmladdnormallinkfoot{\includegraphics[width=0.8\hsize]{wingtip.eps}}{wingtip.mpg}
+# \end{center}
+# \end{figure}
+#
+# Author: G. D. McBain
+# Command: sh wingtip.sh n2414 6 | gfsview3D wingtip.gfv
+# Version: 110213-051327
+# Required files: n2414.dat wingtip.gfv wingtip.sh
+# Running time: 26 minutes
+# Generated files: wingtip.mpg wingtip.eps
+Define FRAMEPERIOD 0.02
+
+6 7 GfsSimulation GfsBox GfsGEdge {} {
+  Time { end = 1.5 }		# exit - trailing edge = (3-0.5) - 1 = 1.5
+  RefineSolid 7
+  Solid AEROFOIL.gts { rz = -INCIDENCE }
+  Init {} { U = 1 }
+  AdaptVorticity { istep = 1 } { maxlevel = 6 cmax = 5e-2 }
+  
+  OutputTime { step = FRAMEPERIOD } stderr
+  OutputSimulation { step = FRAMEPERIOD } stdout
+
+  GModule gfsview
+  OutputView { step = FRAMEPERIOD } { ppm2mpeg > wingtip.mpg } wingtip.gfv
+  OutputView { start = 1 } { convert ppm:- wingtip.eps } wingtip.gfv
+}
+# 123
+# 456
+GfsBox { left = GfsBoundaryInflowConstant 1 }
+GfsBox { }
+GfsBox { right = GfsBoundaryOutflow }
+GfsBox { left = GfsBoundaryInflowConstant 1 }
+GfsBox { }
+GfsBox { right = GfsBoundaryOutflow }
+1 2 right
+2 3 right
+4 5 right
+5 6 right
+1 4 front
+2 5 front
+3 6 front

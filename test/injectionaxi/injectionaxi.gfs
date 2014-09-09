@@ -1,0 +1,104 @@
+# Title:  Unipolar injection through a cylindrical dielectric medium
+#
+# Description:
+#
+# A unipolar injection is established between an inner cylindrical
+# core and an outer grounded cylinder by means of a voltage
+# difference.  The gap between cylinders is filled with a dielectric
+# medium. A front of charge traverses the dielectric medium and finally
+# the steady solution shown in figure \ref{unipolar} is reached.  The
+# simulation uses a polar coordinate metric.
+# \begin{figure}[htbp]
+# \caption{\label{unipolar} Radial distribution of the charge density 
+# and electric potential. (Continuous) analytical solution, (symbols)
+# Gerris EHD module.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{profile.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: Jose M. L\'opez-Herrera S\'anchez
+# Command: gerris2D injectionaxi.gfs
+# Version: 130802
+# Required files: injectionaxi.gfs
+# Running time: 11 seconds
+# Generated files: profile.eps
+
+GModule electrohydro
+
+1 0 GfsElectroHydro GfsBox GfsGEdge { } {
+    Global {
+      #define Volt 1.0
+      #define C 0.68042
+      #define a 0.3
+    }
+    Metric M {
+	x = ((1.-a)*rx+0.5*(1.+a))*cos(ry)
+	y = ((1.-a)*rx+0.5*(1.+a))*sin(ry)
+    }
+    VariableTracer Q {
+	vx = Ex/(1.-a)
+	vy = 0.
+    }
+    VariableTracerVOF T
+    VariableVOFConcentration QC {
+	vx = Ex/(1.-a)
+	vy = 0.
+    } T
+    Init {} {
+	T = 1
+    }
+    Refine 5
+#    AdaptGradient { istep = 5 } { cmax = 0.01 minlevel = 4 maxlevel = 6 } Q
+    Time { end = 1.2 dtmax = 1e-2}
+
+    EventStop { istep = 10 } Q 1.e-5 DQ
+    OutputSimulation { start = end } prof {format = text}
+    OutputErrorNorm { start = end } phi { v = Phi } {
+	s = {
+	    double r2 = x*x+y*y;
+	    double r = sqrt(r2);
+	    double aux = sqrt(1.+r2)+log(r)-log(1.+sqrt(1.+r2));
+	    return 0.710376*(sqrt(2.)-log(1.+sqrt(2.))-aux);
+	    }
+	    unbiased = 1
+    }
+    OutputTime { istep = 10 } stderr
+    EventScript {start = end} {
+	cat <<EOF | gnuplot
+           set term postscript eps lw 3 solid 20 colour
+           set output 'profile.eps'
+           set xlabel 'radius'
+           aux(x)=sqrt(1.+x*x)+log(x)-log(1.+sqrt(1.+x*x))
+           a=0.3
+           A=0.710376
+           Phi(x)=A*(sqrt(2.)-log(1.+sqrt(2.))-aux(x))
+           q(x)=A/sqrt(1.+x*x)
+           plot q(x),'prof' u (sqrt(\$1*\$1+\$2*\$2)):16 t 'Tracer',\
+                     'prof' u (sqrt(\$1*\$1+\$2*\$2)):21 t 'Conc.',\
+                Phi(x), 'prof' u (sqrt(\$1*\$1+\$2*\$2)):8 t 'Phi'
+EOF
+	status=0
+	if awk '{if ($9 > 3.e-4) { print "Phi: " $9 > "/dev/stderr"; exit (1); }}' < phi ; then :
+        else
+            status=$GFS_STOP;
+        fi
+	exit $status
+}
+} {
+    # Electric parameters
+    perm = 1.0
+    charge = Q
+    ElectricProjectionParams {tolerance = 1e-5}
+}
+GfsBox {
+   left = Boundary {
+	BcDirichlet Phi Volt
+	BcDirichlet Q C
+	BcDirichlet QC C
+    }
+    right = Boundary {
+	BcDirichlet Phi 0.
+    }
+}
+1 1 top

@@ -1,0 +1,9 @@
+! Simple checks for compatibility of C and Fortran types
+SUBROUTINE CHECK_INT ( A, B, C )
+  INTEGER A, B, C
+  C = A*B
+END SUBROUTINE CHECK_INT
+SUBROUTINE CHECK_FLOAT ( A, B, C )
+  REAL A, B, C
+  C = A*B
+END SUBROUTINE CHECK_FLOAT

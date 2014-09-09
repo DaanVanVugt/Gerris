@@ -1,0 +1,48 @@
+# Title: Hydrostatic balance with quadratic pressure profile
+#
+# Description:
+#
+# Same test as before but for a quadratic pressure profile.
+#
+# Author: St\'ephane Popinet
+# Command: gerris2D quadratic.gfs
+# Version: 1.2.0
+# Required files: quadratic.gfs
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+    Refine 3
+
+    # This test case only works for constant refinement
+    #    Refine (x*x + y*y < 0.2*0.2 ? 4 : 3) 
+
+    # Note: it is important to use 'cy' rather than 'y' in the formula
+    # below so that the hydrostatic density distribution is correct
+    # even for 'cut cells'
+    Init {} { rho = (cy + 0.5) }
+
+    Source V -rho
+    SourceViscosity 1e-2
+    Solid (ellipse(0.,0.,0.24,0.24))
+    Time { iend = 10 }
+    ApproxProjectionParams { tolerance = 1e-12 }
+    ProjectionParams { tolerance = 1e-12 }
+
+    OutputScalarNorm { istep = 1 } v { v = V }
+    # Checks that the pressure profile is close to the exact solution
+    OutputErrorNorm { istep = 1 } p { v = P } {
+        s = -(cy*cy/2. + 0.5*cy) 
+        unbiased = 1 
+    }
+    EventScript { start = end } { 
+        if awk '{if ($9 > 1.5e-12) exit (1);}' < v ; then :
+        else
+            exit $GFS_STOP;
+        fi        
+        if awk '{if ($9 > 1e-12) exit (1);}' < p ; then :
+        else
+            exit $GFS_STOP;
+        fi
+    } 
+}
+GfsBox {
+    bottom = Boundary
+}

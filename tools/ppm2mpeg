@@ -1,0 +1,28 @@
+#!/bin/bash
+
+if test -z "`which ffmpeg`"; then
+    echo "ppm2mpeg: error: could not find 'ffmpeg'" > /dev/stderr
+    exit 1
+fi
+
+command="ffmpeg -f image2pipe -vcodec ppm -i - -vcodec mpeg1video -b 1800K -f mpeg1video"
+while test $# -gt 0; do
+    command="$command $1"
+    shift
+done
+
+if test -d "$TMPDIR" ; then
+  log=`mktemp $TMPDIR/ppm2mpeg.XXXXXX`
+else
+  log=`mktemp /tmp/ppm2mpeg.XXXXXX`
+fi
+
+if $command - 2> $log; then :
+else
+    cat $log > /dev/stderr
+    rm -f $log
+    exit 1
+fi
+rm -f $log
+
+exit 0

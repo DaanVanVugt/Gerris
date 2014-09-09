@@ -1,0 +1,60 @@
+# Title: Flow through a divergent channel
+#
+# Description:
+#
+# A test case initially presented by Almgren et al \cite{almgren97}.
+# The Euler equations are solved in a divergent channel for a unit
+# inflow velocity on the left boundary and outflow on the right
+# boundary.
+#
+# Tables \ref{channel-x} and \ref{channel-y} illustrate the errors and
+# convergence orders obtained for both components of the velocity when
+# the resolution varies. Richardson extrapolation is used.  The errors
+# are computed either on the whole domain (All cells) or on the cells
+# whose parents at level 5 are entirely contained in the fluid (Full
+# 128 cells).
+#
+# Close to second-order convergence is obtained in the bulk of the
+# fluid, reducing to first-order close to the boundaries. The errors
+# are small in all cases (with a maximum of .5\%) and comparable to
+# that obtained by Almgren et al using a different discretisation.
+#
+# \input{convergence.tex}
+#
+# Author: St\'ephane Popinet
+# Command: sh channel.sh channel.gfs
+# Version: 1.1.0
+# Required files: channel.sh orderU.ref orderfU.ref orderV.ref orderfV.ref
+# Running time: 3 minutes
+# Generated files: convergence.tex
+#
+4 3 GfsSimulation GfsBox GfsGEdge {} {
+    Time { end = 1 }
+    AdvectionParams { cfl = 0.9 }
+    ProjectionParams { tolerance = 1e-6 }
+    ApproxProjectionParams { tolerance = 1e-6 }
+    Refine LEVEL
+    Global {
+        double channel (double x) {
+            double y1 = 0.2/4.;
+            double y2 = 1e-6/4.;
+            
+            return x <= -0.25 ? y1 : 
+                   x < 0.25 ? y2 + 0.5*(y1 - y2)*(1. + cos (2.*M_PI*(x + 0.25))) : 
+                   y2;
+        }
+    }
+    Solid (0.125 - channel (x) - y) { scale = 4 tx = 1.5 }
+    Solid (y + 0.125 - channel (x)) { scale = 4 tx = 1.5 }
+    Init {} { U = 1 }
+    OutputSimulation { start = end } sim-LEVEL {
+        variables = U,V,P
+    }
+}
+GfsBox { left = Boundary { BcDirichlet U 1 } }
+GfsBox {}
+GfsBox {}
+GfsBox { right = BoundaryOutflow }
+1 2 right
+2 3 right
+3 4 right

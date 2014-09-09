@@ -1,0 +1,77 @@
+# GfsView 3D
+View {
+  tx = -0.0122112 ty = 0.0872253
+  sx = 1 sy = 1 sz = 1
+  q0 = -0.284161 q1 = 0.347884 q2 = 0.111265 q3 = 0.886482
+  fov = 35.6081
+  r = 0.3 g = 0.4 b = 0.6
+  res = 1
+  lc = 0.001
+  reactivity = 0.1
+}
+Linear {
+  r = 1 g = 1 b = 1
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+} {
+  n.x = 0 n.y = 0 n.z = 1
+  pos = -0.5
+} Vorticity {
+  amin = 0 min = 0
+  amax = 0 max = 5
+  cmap = Jet
+} 0 {
+  reversed = 0
+  use_scalar = 1
+}
+Linear {
+  r = 1 g = 1 b = 1
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+} {
+  n.x = 1 n.y = 0 n.z = 0
+  pos = -0.5
+} P {
+  amin = 0 min = -0.1
+  amax = 0 max = 0.7
+  cmap = Jet
+} 0 {
+  reversed = 0
+  use_scalar = 1
+}
+Squares {
+  r = 0 g = 0 b = 0
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+} {
+  n.x = 0 n.y = 1 n.z = 0
+  pos = -0.5
+} Level {
+  amin = 0 min = 4
+  amax = 0 max = 7
+  cmap = Jet
+}
+Isosurface {
+  r = 1 g = 1 b = 1
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+} {
+  n.x = 0 n.y = 0 n.z = 1
+  pos = 0
+} P {
+  amin = 1
+  amax = 1
+  cmap = Jet
+} Lambda2 {
+  level = -0.0003
+  reversed = 0
+  use_scalar = 0
+}

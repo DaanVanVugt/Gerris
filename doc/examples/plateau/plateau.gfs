@@ -1,0 +1,178 @@
+# Title: Savart--Plateau--Rayleigh instability of a water column
+#
+# Description:
+#
+# As observed by F\'elix Savart and Joseph Plateau, and confirmed
+# theoretically by Lord Rayleigh, a column of liquid spontaneously
+# breaks up into droplets under the influence of surface tension. An
+# example of this process is given in the animation of Figure
+# \ref{white} for a column of water in air. The solution is computed
+# using a 3D Volume-Of-Fluid (VOF) representation of the
+# interface. The interface in Figure \ref{white} is represented using
+# the VOF-reconstructed fragments. This explains the narrow gaps which
+# can sometimes be seen between fragments in the animation.
+#
+# \begin{figure}[htbp]
+# \caption{\label{white}Evolving interface for a
+# Savart--Plateau--Rayleigh instability.}
+# \begin{center}
+# \video{plateau/white}{480}{480}
+# \end{center}
+# \end{figure}
+#
+# Adaptivity is used to track the regions with high curvature which
+# are created during breakup. The evolution of spatial resolution
+# along the interface is illustrated in Figure \ref{plateau} where the
+# resolution doubles for each change in colour. A detail of the
+# adaptive mesh close to the point of breakup is shown in Figure
+# \ref{closeup}.
+#
+# \begin{figure}[htbp]
+# \caption{\label{plateau}Evolving interface coloured according to the local spatial resolution.}
+# \begin{center}
+# \video{plateau/plateau}{480}{480}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{closeup}Detail of the interface reconnection.}
+# \begin{center}
+# \video{plateau/closeup}{480}{480}
+# \end{center}
+# \end{figure}
+#
+# For this particular example, using adaptivity leads to
+# orders-of-magnitude gains compared to an equivalent simulation on a
+# regular Cartesian mesh (Figure \ref{size}).
+#
+# \begin{figure}[htbp]
+# \caption{\label{size}Total number of grid points as a function of
+# time. A regular Cartesian grid with an equivalent maximum spatial
+# resolution would require $2^{30}\approx$ one billion grid points.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{size.eps}
+# \end{center}
+# \end{figure}
+#
+# A more detailed study of these simulations is given in Popinet
+# (2009), Journal of Computational Physics, 228.
+#
+# Author: St\'ephane Popinet
+# Command: gerris3D -m plateau.gfs
+# Version: 100529
+# Required files: plateau.gfv white.gfv closeup.gfv
+# Running time: 2 hours
+# Generated files: plateau.ogv white.ogv closeup.ogv plateau.png white.png closeup.png plateau.eps white.eps closeup.eps size.eps
+
+# Air/water physical parameters
+Define RHO_L            998.
+Define RHO_G            1.2
+Define MU_L             1.003e-3
+Define MU_G             1.8e-5
+
+# Initial conditions
+Define RADIUS 0.2
+Define EPSILON 0.02
+
+# Make sure that volume fraction is between [0:1]
+Define VAR(T,min,max)   (min + CLAMP(T,0,1)*(max - min))
+Define RHO(T)           VAR(T, RHO_G/RHO_L, 1.)
+Define MUR(T)           VAR(T, MU_G/MU_L, 1.)
+
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+    Time { end = 1.7 }
+    Refine 5
+
+    VariableTracerVOF T
+    # Filter the volume fraction for smoother density transition for
+    # high density ratios: this helps the Poisson solver
+    VariableFiltered T1 T 1
+    PhysicalParams { alpha = 1./RHO(T1) }
+
+    # We need Kmax as well as K(mean) for adaptivity
+    VariableCurvature K T Kmax
+    SourceTension T 1 K
+    VariablePosition Y T y
+    VariablePosition Z T z
+#    SourceViscosityExplicit 1e-2*MUR(T1)
+    SourceViscosity 1e-2*MUR(T1)
+
+    # Initial deformed tube (only a quarter of it)
+    InitFraction {} T ({
+	    x -= 0.5; 
+	    y += 0.5; z += 0.5;
+	    double r = RADIUS*(1. + EPSILON*cos(M_PI*x));
+	    return r*r - y*y - z*z;
+    })
+
+    # Adapt according to interface curvature. Make sure we have at
+    # least 5 grid points per radius of curvature, up to level
+    # 10. Only start after 5 timesteps to ignore transients due to
+    # initialisation
+    AdaptFunction { istart = 5 istep = 10 } {
+	cmax = 0.2
+	maxlevel = 10
+	cfactor = 2
+    } (T > 0 && T < 1 ? dL*Kmax : 0)
+
+    # Remove small satellite droplets (only keep the two largest pieces)
+    RemoveDroplets { istep = 10 } T -2
+
+    OutputTime { istep = 1 } stderr
+    OutputProjectionStats { istep = 1 } stderr
+    OutputSimulation { istep = 1000 } plateau-%ld.gfs
+    EventScript { istep = 1000 } { gzip -f -q plateau-*.gfs }
+
+    # Generate three movies on the fly
+    GModule gfsview
+    OutputView { istep = 7 } { ppm2theora -s 480x480 > plateau.ogv } { 
+    	width = 960 height = 960 
+    } plateau.gfv
+    OutputView { istep = 7 } { ppm2theora -s 480x480 > closeup.ogv } { 
+    	width = 960 height = 960 
+    } closeup.gfv
+    OutputView { istep = 7 } { ppm2theora -s 480x480 > white.ogv } { 
+    	width = 960 height = 960 
+    } white.gfv
+
+    # Generate figures
+    EventScript { start = end } {
+	for f in white plateau closeup; do
+	    echo "Save $f.ppm { format = PPM width = 960 height = 960 }" | \
+		gfsview-batch3D $f.gfv plateau-1000.gfs.gz
+	    convert $f.ppm -geometry 480x480 $f.png
+	    convert $f.png $f.eps
+	    rm -f $f.ppm
+	done
+	cat <<EOF | gnuplot
+        set term postscript eps color lw 2 20
+        set output 'size.eps'
+        set xlabel 'Timestep'
+        set ylabel 'Total number of cells'
+        unset key
+        plot [10:]'< grep domain size' u 3 w l
+EOF
+    }
+
+    OutputTiming { istep = 100 } stderr
+
+    OutputScalarNorm { istep = 1 } v { v = Velocity }
+
+    # Evolution of the minimum and maximum interface radii
+    OutputScalarStats { istep = 1 } r {
+	v = (T > 1e-2 && T < 1. - 1e-2 ? 
+	    (sqrt((Y + 0.5)*(Y + 0.5) + (Z + 0.5)*(Z + 0.5))/RADIUS - 1.)/EPSILON : 0)
+    }
+    OutputScalarStats { istep = 1 } k { v = K }
+    OutputScalarStats { istep = 1 } kmax { v = Kmax }
+    OutputScalarSum { istep = 1 } t { v = T }
+    OutputBalance { istep = 1 } size
+}
+GfsBox {
+    top = BoundaryOutflow
+    bottom = Boundary
+    back = Boundary
+    front = BoundaryOutflow
+    left = Boundary
+    right = Boundary
+}

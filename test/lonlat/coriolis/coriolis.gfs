@@ -1,0 +1,53 @@
+# Title: Circular dam break on a rotating sphere
+#
+# Description:
+#
+# Similar test case but with rotation. See also test case of \cite{rossmanith2004}, Figure 7.
+#
+# \begin{figure}[htbp]
+# \caption{Solution to the rotating shallow-water equations computed
+# on a longitude-latitude grid in the domain
+# $[-75^\circ,75^\circ]\times[-75^\circ,75^\circ]$ with $256\times
+# 256$ points. The Coriolis parameter is set to $f=10$. The solution
+# is shown at times (a) $t=0.4$, (b) $t=0.8$, and (c) $t=1.2$.
+# }
+# \begin{center}
+# \begin{tabular}{cc}
+# (a) \includegraphics[width=0.45\hsize]{isolines-0.4.eps} &
+# (b) \includegraphics[width=0.45\hsize]{isolines-0.8.eps} \\
+# \multicolumn{2}{c}{(c) \includegraphics[width=0.45\hsize]{isolines-1.2.eps}}
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: gerris2D -m coriolis.gfs
+# Version: 090924
+# Required files: isolines.gfv
+# Running time: 5 minutes
+# Generated files: isolines-0.4.eps isolines-0.8.eps isolines-1.2.eps
+#
+Define LENGTH (150./180.*M_PI)
+
+1 0 GfsRiver GfsBox GfsGEdge {} {
+    PhysicalParams { L = LENGTH }
+    MetricLonLat M 1.
+    Refine 8
+    InitFraction P (0.2 - acos(cos(x*M_PI/180.)*cos(y*M_PI/180.)))
+    Init {} { P = 0.2 + 1.8*P/LENGTH }
+    Time { end = 1.4 }
+    SourceCoriolis 10.*sin(y*M_PI/180.)
+    OutputTime { istep = 10 } stderr
+    GModule gfsview
+    OutputView { start = 0.4 step = 0.4 } isolines-%g.eps { 
+	format = EPS line_width = 0.5 
+    } isolines.gfv
+    OutputSimulation { step = 0.4 } sim-%g.txt { variables = U,V,P format = text }
+#    OutputSimulation { istep = 10 } stdout
+}
+GfsBox {
+    right = Boundary { BcNeumann U 0 }
+    left = Boundary { BcNeumann U 0 }
+    top = Boundary { BcNeumann V 0 }
+    bottom = Boundary { BcNeumann V 0 }
+}

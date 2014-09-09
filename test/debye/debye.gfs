@@ -1,0 +1,115 @@
+# Title: Gouy-Chapman Debye layer
+#
+# Description:
+#
+# The Debye layer is the ionic concentration and potential
+# distribution equilibrium structure that appears on the surface of a
+# charged electrode in contact with solvents in which are dissolved
+# ionic species. Gouy and Chapman proposed a model of a diffuse Debye
+# layer taking into account that the concentrations of these ionic
+# species are governed by the combined effect of its thermal diffusion
+# and its electrostatic attraction or repulsion.
+#
+# In the case of a plane electrode within a fully dissolved binary
+# system (ion and counterions of valence $z$, $|z|=1$) the model
+# reduces to the following dimensionless equations:
+# $$ 
+# n_{+} = e^{-\phi} \quad \mbox{and} \quad n_{-}=e^{\phi} 
+# $$ 
+# $$ 
+# d^2 \phi/d x^2 = -(n_{+}-n_{-})=2 \sinh(\phi) 
+# $$
+# with the boundary conditions: $\phi(0)=\phi_o$ and $\phi(x
+# \rightarrow \infty)=0$. In the above equations the concentrations of
+# anions and cations, $n_{+}$ and $n_{-}$ respectively, have been made
+# dimensionless with the bulk concentration, $n_o$, the potential
+# $\phi$ with $(K_b T/e)$ and lengths with the Debye's length
+# $\lambda_D = [n_o e^2/(K_b T \varepsilon)]^{1/2}$ where $K_b$ is
+# Boltzmann's constant, $T$ the temperature, $e$ the charge of the
+# electron and $\varepsilon$ the permittivity of the fluid.
+# \begin{figure}[htbp]
+# \caption{\label{charge} Profiles of electric potential,
+# concentration of anions and cations in the Debye layer. The lines
+# are the analytical solution and the symbols the numerical
+# solution.}
+# \begin{center}
+# \includegraphics[width=\hsize]{profile.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: J.M. L\'opez-Herrera
+# Command: sh debye.sh
+# Version: 111123
+# Required files: debye.sh points analytical
+# Running time: 66.59 seconds
+# Generated files: profile.eps
+
+GModule electrohydro
+
+5 4 GfsElectroHydro GfsBox GfsGEdge { x = 0.5 } {
+
+    Global {
+      #define Volt 1.0
+    }
+    VariableTracer Cpos { scheme = none }
+    VariableTracer Cneg { scheme = none } 
+    AdaptGradient { istep = 5 } { cmax = 0.02 minlevel = 3 maxlevel = 5 } Cneg 
+
+    Init {} {
+       Phi = Volt*(1.-x/5.)
+       Cpos =  1. 
+       Cneg =  1. 
+    }
+    Time { end = 3.5 dtmax = 0.01 }
+   
+    SourceDiffusion Cpos 1.0
+    SourceDiffusionExplicit Cpos Cpos Phi
+    
+    SourceDiffusion Cneg 1.0
+    SourceDiffusionExplicit  Cneg -Cneg Phi 
+      
+    EventStop { istep = 10 } Phi 1e-4 DPhi
+
+#    OutputSimulation { istep = 5 } stdout 
+    OutputLocation { start = end } { 
+	awk '{ if ($1 != "#") print $2, $9, $12, $13; }' > profile 
+    } points
+} {
+    # Electric parameters
+    perm = 1.0
+    charge = (Cpos - Cneg)
+}
+GfsBox {
+    top = Boundary 
+    bottom = Boundary
+    left = Boundary { 
+	BcDirichlet Phi Volt 
+	BcDirichlet Cpos exp(-Volt) 
+	BcDirichlet Cneg exp(Volt) 
+    }
+}
+GfsBox {
+    top = Boundary 
+    bottom = Boundary
+}
+GfsBox {
+    top = Boundary 
+    bottom = Boundary
+}
+GfsBox {
+    top = Boundary 
+    bottom = Boundary
+}
+GfsBox {
+    top = Boundary 
+    bottom = Boundary
+    right = Boundary { 
+	BcDirichlet Phi 0.
+        BcDirichlet Cpos 1.
+        BcDirichlet Cneg 1. 
+    }
+}
+1 2 right
+2 3 right
+3 4 right
+4 5 right

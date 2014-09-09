@@ -1,0 +1,88 @@
+# Title: Lid-driven cavity at Re=1000 (explicit scheme)
+#
+# Description:
+#
+# Same test case but with an explicit scheme for the viscous term.
+#
+# Author: St\'ephane Popinet
+# Command: sh lid.sh explicit.gfs
+# Version: 1.3.0
+# Required files: lid.sh
+# Running time: 70 minutes
+# Generated files: xprof yprof xprof.eps yprof.eps velocity.eps
+#
+# The simulation domain has 1 GfsBox
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+
+  # Stop the simulation at t = 300 if convergence has not been reached before
+  Time { end = 300 }
+
+  # Use an initial refinement of 6 levels (i.e. 2^6=64x64)
+  Refine 6
+
+  # Set a viscosity source term on the velocity vector with x-component U
+  # The Reynolds number is Re = L*U/Nu = 1*1/1e-3 = 1000
+  SourceViscosityExplicit 1e-3
+
+  # Stops the simulation if the maximum of the absolute value of the
+  # difference between the current U field and the U field 10 timesteps
+  # before is smaller than 1e-4.
+  #
+  # Stores this difference in the DU field (this can be used for
+  # monitoring the convergence of the simulation).
+  EventStop { istep = 10 } U 1e-4 DU
+
+  OutputScalarNorm { istep = 10 } du { v = DU }
+
+  # Pipes a bitmap PPM image representation of the velocity field at the end of the simulation
+  # into the ImageMagick converter "convert" to create the
+  # corresponding EPS file
+  OutputPPM { start = end } { convert -colors 256 ppm:- velocity.eps } {
+    v = Velocity
+  }
+
+  # At the end of the simulation, computes the values of the variables
+  # at the locations defined in files xprofile, yprofile and stores the
+  # results in files xprof, yprof
+  OutputLocation { start = end } xprof ../xprofile
+  OutputLocation { start = end } yprof ../yprofile
+
+  # At the end of the simulation calls the script generating the EPS
+  # files using gnuplot and files: xprof, yprof, xprof.ghia, yprof.ghia
+  EventScript { start = end } {
+    cat <<EOF | gnuplot
+    set term postscript eps lw 3 solid 20
+    set output 'xprof.eps'
+    set xlabel 'Y'
+    set ylabel 'U'
+    plot [-0.5:0.5]'../xprof.ghia' u 1:2 title "Ghia et al." w p ps 2 pt 9, 'xprof' u 3:7 w l title "Gerris"
+    set output 'yprof.eps'
+    set xlabel 'X'
+    set ylabel 'V'
+    plot [-0.5:0.5]'../yprof.ghia' u 1:2 title "Ghia et al." w p ps 2 pt 9, 'yprof' u 2:8 w l title "Gerris"
+EOF
+  }
+}
+GfsBox {
+
+  # Dirichlet boundary conditions for both components of the velocity on all sides:
+  # - non-slip (U = V = 0) on right, left and bottom boundaries
+  # - tangential velocity equal to 1 (U = 1) on top boundary
+
+  top = Boundary {
+    BcDirichlet U 1
+    BcDirichlet V 0
+  }
+  bottom = Boundary {
+    BcDirichlet U 0
+    BcDirichlet V 0
+  }
+  right = Boundary {
+    BcDirichlet U 0
+    BcDirichlet V 0
+  }
+  left = Boundary {
+    BcDirichlet U 0
+    BcDirichlet V 0
+  }
+}

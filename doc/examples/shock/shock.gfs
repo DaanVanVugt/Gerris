@@ -1,0 +1,72 @@
+# Title: Shock reflection by a circular cylinder
+#
+# Description:
+#
+# The evolution of an initial "step" wave is modelled using the
+# Saint-Venant equations. The wave interacts with a circular cylinder
+# described using embedded solid boundaries. Adaptivity is used to
+# track the wave fronts. This example is discussed in \cite{an2012}.
+#
+# \begin{figure}[htbp]
+# \caption{(a) Animation of the evolution of water depth. (b) Adaptive mesh at $t=0.3$.}
+# \begin{center}
+# \begin{tabular}{cc}
+# \htmladdnormallinkfoot{\includegraphics[width=0.45\hsize]{depth.eps}}{depth.mpg} &
+# \includegraphics[width=0.45\hsize]{mesh.eps} \\
+# (a) & (b)
+# \end{tabular}
+# \end{center}
+# \end{figure}
+#
+# Author: Hyunuk An, Soonyoung Yu and St\'ephane Popinet
+# Command: gerris2D shock.gfs | gfsview2D depth.gfv
+# Version: 120320
+# Required files: depth.gfv mesh.gfv
+# Running time: 2 minutes
+# Generated files: depth.mpg depth.eps mesh.eps
+1 0 GfsRiver GfsBox GfsGEdge {} {
+    Time { end = 0.3 }
+
+    PhysicalParams { L = 5 g = 9.81 }
+
+    # We use a sphere knowing that in 2D the resulting object will be
+    # a cross-section of the sphere at z = 0 i.e. a cylinder of radius
+    # 0.5
+    Solid (sphere(-0.5,0.,0.,0.5))
+
+    Init {} {
+	# Initial shock
+	P = (x <= -1. ? 3.505271526 : 1.)
+	U = (x <= -1. ? 22.049341608 : 0.)
+    }
+
+    Refine 9
+    AdaptGradient { istep = 1 } {
+        cmax = 0.1
+        cfactor = 2
+        maxlevel = 9
+    } P
+
+    OutputTime { istep = 10 } stderr
+    OutputSimulation { istep = 10 } stdout
+
+    GModule gfsview
+    OutputView { step = 0.0025 } {
+	ppm2mpeg -b 3600K > depth.mpg
+    } { width = 400 height = 400 } depth.gfv
+    OutputView { start = end } { 
+	convert ppm:- depth.eps 
+    } { width = 400 height = 400 } depth.gfv
+    OutputView { start = end } { 
+	convert ppm:- mesh.eps 
+    } { width = 400 height = 400 } mesh.gfv
+}
+GfsBox {
+    left = Boundary {
+	BcDirichlet P 3.505271526
+	BcDirichlet U 22.049341608
+    }
+    right = Boundary
+    top = Boundary 
+    bottom = Boundary
+}

@@ -1,0 +1,65 @@
+# Title: Convergence for a simple periodic problem
+#
+# Description:
+#
+# This is one of the test cases presented in Popinet \cite{popinet2003}.
+# Following Minion \cite{minion96} and Almgren et al. \cite{almgren98},
+# this convergence test illustrates the second-order
+# accuracy of Gerris for flows without solid boundaries. This
+# problem uses a square unit domain with periodic boundary conditions in
+# both directions. The initial conditions are taken as
+# \begin{eqnarray*}
+# u(x,y) &=& 1-2\cos(2\pi x)\sin(2\pi y), \\
+# v(x,y) &=& 1+2\sin(2\pi x)\cos(2\pi y). 
+# \end{eqnarray*}
+# The exact solution of the Euler equations for these initial conditions
+# is
+# \begin{eqnarray*}
+# u(x,y,t) &=& 1-2\cos(2\pi(x-t))\sin(2\pi(y-t)), \\
+# v(x,y,t) &=& 1+2\sin(2\pi(x-t))\cos(2\pi(y-t)), \\
+# p(x,y,t) &=& -\cos(4\pi(x-t))-\cos(4\pi(y-t)).
+# \end{eqnarray*}
+# As in \cite{almgren98} nine runs are performed on grids with $L=5,6$
+# and $7$ levels of refinement (labelled ``uniform'') and with one
+# (labelled $r=1$) or two (labelled $r=2$) additional levels added only
+# within the square defined by the points $(-0.25,-0.25)$ and
+# $(0.25,0.25)$. The length of the run for each case is 0.5, the CFL number is
+# 0.75. For each run both the $L_2$ and $L_\infty$ norms of the error in
+# the $x$-component of the velocity is computed. Table \ref{minion1}
+# gives the errors and order of convergence obtained.
+#
+# Close to second-order convergence is obtained (asymptotically in
+# $L$) for the $L_2$ and $L_\infty$ norms. The values
+# obtained are comparable to that in \cite{minion96,almgren98}.
+# \begin{table}
+# \caption{\label{minion1}Errors and convergence orders in the $x$-component of the velocity
+# for a simple periodic problem. The reference solution values are given in blue.}
+# \begin{center}
+# \input{minion1.tex}
+# \end{center}
+# \end{table}
+#
+# Author: St\'ephane Popinet
+# Command: sh periodic.sh periodic.gfs
+# Version: 0.6.4
+# Required files: periodic.sh r0.ref r1.ref r2.ref
+# Running time: 3 minutes
+# Generated files: minion1.tex
+#
+1 2 GfsSimulation GfsBox GfsGEdge {} {
+  Time { end = 0.5 }
+  AdvectionParams { cfl = 0.75 }
+  Refine (x < -0.25 || x > 0.25 || y < -0.25 || y > 0.25 ? LEVEL : LEVEL + BOX)
+  Init {} {
+    U = (1. - 2.*cos (2.*M_PI*x)*sin (2.*M_PI*y))
+    V = (1. + 2.*sin (2.*M_PI*x)*cos (2.*M_PI*y))
+  }
+  ApproxProjectionParams { tolerance = 1e-6 }
+  ProjectionParams { tolerance = 1e-6 }
+  OutputErrorNorm { start = end } stdout { v = U } {
+    s = (1. - 2.*cos (2.*M_PI*(x - t))*sin (2.*M_PI*(y - t)))
+  }
+}
+GfsBox {}
+1 1 right
+1 1 top

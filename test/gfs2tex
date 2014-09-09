@@ -1,0 +1,19 @@
+#!/usr/bin/python
+
+import sys
+import os
+import os.path
+import glob
+sys.path.append("../doc/examples")
+import gfs2tex
+
+if not os.access("tests",os.F_OK):
+    os.mkdir("tests")
+
+for start in sys.argv[1:]:
+    for root, dirs, files in os.walk(start,topdown=True):
+        if not ".xvpics" in root:
+            example = gfs2tex.Example(root)
+            if not os.access("tests/" + example.path,os.F_OK):
+                os.symlink("../" + example.path, "tests/" + example.path)
+            example.write(style="tests.css")

@@ -1,0 +1,21 @@
+4 8 GfsAdvection GfsBox GfsGEdge {} {
+    Refine 4
+    VariableTracerVOFHeight T
+    VariableCurvature K T
+    InitFraction T (ellipse (-0.5, -1.5, 0.6, 1.2))
+    Init {} { U = 2 }
+    Time { end = 1. }
+    OutputSimulation { start = end } stdout
+}
+GfsBox { pid = 0 }
+GfsBox { pid = 1 }
+GfsBox { pid = 2 }
+GfsBox { pid = 3 }
+1 2 right
+1 2 left
+1 3 top
+1 3 bottom
+2 4 top
+2 4 bottom
+3 4 right
+3 4 left

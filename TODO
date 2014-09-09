@@ -1,0 +1,42 @@
+- Add corner flow test case.
+
+- The boundary conditions for the gradient of the pressure could be
+improved.
+
+Possible speed optimizations: 
+
+- packing of parallel communications (in the case of domain composed
+of several boxes).  
+
+- parallel match() uses doubles for cell layout description, guint
+would be more space efficient.
+
+- multiple calls to fl_domain_depth() are not needed => store maxlevel
+in FlDomain struct and update it only when necessary (i.e. when
+refining/coarsening etc...).
+
+Dodgy stuff:
+
+- Check that gfs_face_gradient() is used properly when not used for
+  poisson problem (i.e. advection) (particularly in 3D with the factor of 2).
+
+Future stuff:
+
+- Richardson extrapolation => being able to compute advection terms
+  one level above the leaf cells.
+
+- Adaptation given a constraint on maximum domain size (i.e. optimal
+  distribution of a finite number of cells) (done 09/2003)
+
+- Generalize relaxation: (done 11/2002)
+  * necessary for Crank-Nicholson
+  *    "      for variable density (done 11/2002)
+
+- GFS -> OpenDX file conversion (done 11/2002, DX module).
+
+- Optimize parallel code by overlapping communications and
+   computations: (done 2009)
+  This could be done relatively easily (in Poisson relaxation for
+  example) by first relaxing the cells close to the boundaries, start
+  the communications, relax the remaining bulk cells then synchronize
+  the communications.

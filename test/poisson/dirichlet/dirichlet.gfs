@@ -1,0 +1,95 @@
+# Title: Dirichlet boundary condition
+#
+# Description:
+#
+# Similar to the previous test but with embedded solid boundaries and
+# a non-trivial Dirichlet boundary condition. This test case was
+# proposed by \cite{johansen98}. The boundary of the domain is defined by
+# $$r < 0.30 + 0.15\cos(6\theta)$$
+# The Poisson problem to solve in this domain is
+# $$\nabla^2\Phi=7r^2\cos(3\theta)$$
+# which has the exact solution
+# $$\Phi=r^4\cos(3\theta)$$
+# which is used as boundary condition.
+#
+# \begin{figure}[htbp]
+# \caption{\label{residual}Evolution of the residual.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{residual.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{rate}Average reduction factor.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{rate.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{error}Evolution of the error as a function of resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{order}Corresponding convergence order.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{order.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh ../poisson.sh dirichlet.gfs
+# Version: 100707
+# Required files: res-7.ref error.ref order.ref
+# Generated files: residual.eps rate.eps error.eps order.eps
+#
+1 0 GfsPoisson GfsBox GfsGEdge {} {
+    Time { iend = 1 }
+    Refine LEVEL
+
+    Solid ({
+            double theta = atan2 (y, x);
+            double radius = 0.30 + 0.15*cos (6.*theta);
+            return radius*radius - x*x - y*y;
+    })
+    SurfaceBc P Dirichlet {
+	double theta = atan2 (y, x);
+	double r2 = x*x + y*y;
+	return r2*r2*cos (3.*theta);
+    }
+
+    GModule hypre
+    ApproxProjectionParams { 
+	tolerance = 1e-30 
+	erelax = 2 
+	nitermin = CYCLE nitermax = CYCLE 
+    }
+
+    Init {} {
+	Div = {
+	    double theta = atan2 (y, x);
+	    double r2 = x*x + y*y;
+	    return 7.*r2*cos (3.*theta);
+	}
+    }
+    OutputTime { istep = 1 } {
+	awk '{if ($2 == 1) print CYCLE, $8;}' >> time
+    }
+    OutputProjectionStats { start = end } {
+	awk '{if ($1 == "residual.infty:") print CYCLE, $3, $4;}' >> proj
+    }
+    OutputErrorNorm { start = end } {
+	awk '{print LEVEL, $5, $7, $9}' >> error 
+    } { v = P } {
+	s = {
+	    double theta = atan2 (y, x);
+	    double r2 = x*x + y*y;
+	    return r2*r2*cos (3.*theta);
+	}
+    }
+    OutputSimulation { start = end } end-SOLVER.gfs
+}
+GfsBox {}

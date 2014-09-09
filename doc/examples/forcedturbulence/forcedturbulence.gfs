@@ -1,0 +1,190 @@
+# Title: Forced isotropic turbulence in a triply-periodic box
+#
+# Description:
+#
+# We compute the evolution of forced isotropic turbulence (see
+# \cite{rosales2005}) and compare Gerris' solution to that of the
+# \htmladdnormallinkfoot{hit3d}{http://code.google.com/p/hit3d/}
+# pseudo-spectral code. The initial condition is an unstable solution
+# to the incompressible Euler equations. Numerical noise in the
+# solution eventually leads to the destabilisation of the base
+# solution into a fully turbulent flow where turbulent dissipation
+# balances the linear input of energy (as illustrated graphically in
+# the animation of Figure \ref{vorticity}).
+#
+# The two codes agree at early time, or until the solution transitions
+# to a turbulent state. This happens earlier in Gerris as the symmetry
+# of the base state is not preserved with the same accuracy as in the
+# pseudo-spectral code (the main reason being the tolerance on
+# non-divergence of the incompressible velocity field). Note however
+# that the statistics produced by the two codes agree well after
+# transition to turbulence.
+#
+# Adaptivity is used in Gerris to reduce the computational
+# cost. Figure \ref{size} illustrates the number of grid points as a
+# function of time.
+#
+# \begin{figure}[htbp]
+# \caption{\label{vorticity}Animation of the evolution of the
+# $\lambda_2$ isosurface (a way to characterise vortices),
+# cross-sections of the level of refinement (bottom plane), of the
+# magnitude of vorticity (right plane) and pressure (left plane).}
+# \begin{center}
+# \htmladdnormallinkfoot{\includegraphics[width=0.8\hsize]{multiview.eps}}{multiview.mpg}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{energy}Evolution of kinetic energy as computed via
+# Gerris and a pseudo-spectral code. Note how the energy grows
+# exponentially before the flow finally transitions to
+# turbulence. This is because the laminar solution is relatively
+# smooth and its dissipation is unable to balance the energy input.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{Energy.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{dissipation}The dissipation function. The
+# dissipation increases exponentially during the laminar stage as it
+# is proportional to energy at this stage. During transition the
+# dissipation increases drastically as the flow gains energy at higher
+# wavenumbers.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{Dissipation.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{reynolds}The microscale Reynolds number.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{Reynolds.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{size}Number of grid points as a function of time for
+# Gerris and the spectral code.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{size.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: Kristjan Gudmundsson
+# Command: mpirun -np 8 gerris3D -m -s1 forcedturbulence.gfs
+# Version: 110131
+# Required files: spectral.dat multiview.gfv
+# Running time: 22 hours on 8 AMD Opteron 2GHz
+# Generated files: multiview.mpg multiview.eps Energy.eps Dissipation.eps Reynolds.eps size.eps
+
+Define MU 0.01
+Define VOLUME (8.*M_PI*M_PI*M_PI)
+Define Ubar (SU/VOLUME)
+Define Vbar (SV/VOLUME)
+Define Wbar (SW/VOLUME)
+Define Unbar (Un/VOLUME)
+
+1 3 GfsSimulation GfsBox GfsGEdge {} {
+
+  Time { end = 300 }
+
+  Refine 4
+  PhysicalParams{ L = 2.*M_PI }
+
+  # The initial condition is "ABC" flow. This is a laminar base flow that 
+  # is easy to implement in both Gerris and a spectral code. 
+  Init {} {
+      U = cos(y) + sin(z)
+      V = sin(x) + cos(z)
+      W = cos(x) + sin(y)
+  }
+
+  # Set the viscosity mu
+  SourceViscosity MU
+
+  # Calculate the mean flow
+  SpatialSum { istep = 1 } SU U
+  SpatialSum { istep = 1 } SV V
+  SpatialSum { istep = 1 } SW W
+  SpatialSum { istep = 1 } Un Velocity
+
+  # Adapt according to the relative error on the velocity field (with
+  # a 5% threshold)
+  AdaptError { istep = 1 } { cmax = 5e-2 maxlevel = 7 } U/Unbar
+  AdaptError { istep = 1 } { cmax = 5e-2 maxlevel = 7 } V/Unbar
+  AdaptError { istep = 1 } { cmax = 5e-2 maxlevel = 7 } W/Unbar
+
+  # Calculate -eps = mu * sum_{ij} (partial_j u_i)^2
+  SpatialSum { istep = 1 } Dissipation { 
+      return MU*(dx("U")*dx("U") + dy("U")*dy("U") + dz("U")*dz("U") + 
+                 dx("V")*dx("V") + dy("V")*dy("V") + dz("V")*dz("V") +
+                 dx("W")*dx("W") + dy("W")*dy("W") + dz("W")*dz("W"));
+  } 
+
+  # The mean fluctuating kinetic energy
+  SpatialSum { istep = 1 } FluctKinEn {
+      return 0.5*((U - Ubar)*(U - Ubar) + 
+                  (V - Vbar)*(V - Vbar) +
+                  (W - Wbar)*(W - Wbar));
+  } 
+
+  # Add the linear forcing, subtracting the mean
+  Source U 0.1*(U - Ubar)
+  Source V 0.1*(V - Vbar)
+  Source W 0.1*(W - Wbar)
+
+  # Output
+  OutputTime { istep = 1 } log
+  OutputBalance { istep = 1 } log
+  OutputScalarStats { istep = 1 } log { v = Unbar }
+  OutputScalarStats { istep = 1 } log { v = U }
+  OutputScalarStats { istep = 1 } Reynolds.dat { 
+      v = 2./3.*FluctKinEn/VOLUME/MU*sqrt(15*MU/(Dissipation/VOLUME))
+  }
+  OutputScalarStats { istep = 1 } Dissipation.dat { v = Dissipation/VOLUME }
+  OutputScalarStats { istep = 1 } Energy.dat { v = FluctKinEn/VOLUME }
+  OutputScalarStats { istep = 1 } Vorticity.dat { v = Vorticity }  
+  EventScript { istep = 100 } { rm -f snapshot-*.gfs }
+  OutputSimulation { istep = 100 } snapshot-%ld.gfs
+  OutputSimulation { start = end } end.gfs
+  
+  # Generate graphics
+  GModule gfsview
+  OutputView { step = 0.1 end = 150 } { ppm2mpeg > multiview.mpg } {
+      width = 512 height = 512
+  } multiview.gfv
+  OutputView { start = end } { convert ppm:- multiview.eps } {
+      width = 512 height = 512
+  } multiview.gfv
+
+  EventScript { start = end } {
+      gnuplot <<EOF
+        set term postscript eps lw 3 solid 20 colour
+
+        set output 'Energy.eps'
+        set xrange [0:300]
+        set xlabel 'Time'
+        set ylabel 'Kinetic energy'
+        set logscale y
+        plot 'Energy.dat' u 3:7 w l t 'Gerris', 'spectral.dat' u 1:(\$3*3/2) w l t 'Spectral'
+
+        set output 'Reynolds.eps'
+        set ylabel 'Microscale Reynolds number'
+        plot 'Reynolds.dat' u 3:7 w l t 'Gerris', 'spectral.dat' u 1:4 w l t 'Spectral'
+
+        set output 'Dissipation.eps'
+        set ylabel 'Dissipation function'
+        plot 'Dissipation.dat' u 3:7 w l t 'Gerris', 'spectral.dat' u 1:2 w l t 'Spectral'
+
+        set output 'size.eps'
+        set ylabel 'Total number of grid points'
+        unset logscale
+        plot "< awk '{ if (\$1 == \"step:\") t = \$4; else if (\$1 == \"domain\") print t,\$5*8.;}' < log" w l t 'Gerris', 128**3 t 'spectral'
+EOF
+  }
+}
+GfsBox {}
+1 1 right
+1 1 top
+1 1 front

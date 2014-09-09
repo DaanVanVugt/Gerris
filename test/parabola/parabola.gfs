@@ -1,0 +1,111 @@
+# Title: Oscillations in a parabolic container
+#
+# Description:
+#
+# Analytical solutions for the damped oscillations of a liquid in a
+# parabolic container have been derived by Sampson et al
+# \cite{sampson2006,liang2008}. Figure \ref{elevation} illustrates the
+# numerical and analytical solutions at $t = 1500$ seconds.  Wetting
+# and drying occur at the two moving contact points and hydrostatic
+# balance is approached as time passes.
+#
+# Figure \ref{u0} gives the analytical and numerical solutions for the
+# horizontal component of velocity (which is spatially
+# constant). Figures \ref{convergence} and \ref{convergence-u} give
+# the relative errors in surface elevation and horizontal velocity
+# respectively, as functions of spatial resolution.
+#
+# The errors are small and larger-than-first-order convergence rates
+# are obtained.
+#
+# See also \cite{popinet2011c} for details.
+#
+# \begin{figure}[htbp]
+# \caption{\label{elevation}Solution at $t = 1500$ seconds. Six levels of refinement.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{elevation.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{u0}Time evolution of the (spatially constant)
+# horizontal velocity. Seven levels of refinement.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{u0.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{convergence}Evolution of the relative elevation
+# error norms as functions of resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{convergence.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{convergence-u}Evolution of the relative velocity error
+# L2-norm as a function of resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{convergence-u.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh parabola.sh parabola.gfs
+# Version: 1.3.1
+# Required files: parabola.sh error.ref
+# Generated files: elevation.eps u0.eps convergence.eps convergence-u.eps
+#
+Define h0 10.
+Define a 3000.
+Define tau 1e-3
+Define B 5
+Define G 9.81
+
+1 0 GfsRiver GfsBox GfsGEdge {} {
+
+    # Analytical solution, see Sampson, Easton, Singh, 2006
+    Global {
+	static gdouble Psi (double x, double t) {
+	    double p = sqrt (8.*G*h0)/a;
+	    double s = sqrt (p*p - tau*tau)/2.;
+	    return a*a*B*B*exp (-tau*t)/(8.*G*G*h0)*(- s*tau*sin (2.*s*t) + 
+		(tau*tau/4. - s*s)*cos (2.*s*t)) - B*B*exp(-tau*t)/(4.*G) -
+	    exp (-tau*t/2.)/G*(B*s*cos (s*t) + tau*B/2.*sin (s*t))*x;
+	}
+    }
+
+    PhysicalParams { L = 10000 }
+    RefineSurface LEVEL (y - 10000.*(0.5 - 1./pow(2,LEVEL)))
+    InitMask {} (y < 10000.*(0.5 - 1./pow(2,LEVEL)))
+    Init {} {
+	Zb = h0*(x/a)*(x/a)
+	P = MAX (0., h0 + Psi (x, 0.) - Zb)
+    }
+    Init { istep = 1 } {
+	Pt = MAX (0., h0 + Psi (x, t) - Zb)
+    }
+    # Better convergence rates are obtained at lower CFL
+    # AdvectionParams { cfl = 0.1 }
+    PhysicalParams { g = G }
+    SourceCoriolis 0 tau
+    Time { end = 6000 }
+    OutputSimulation { start = 1500 } sim-LEVEL-%g.txt { format = text }
+    OutputSimulation { start = end } end-LEVEL.txt { format = text }
+    OutputScalarSum { istep = 10 } ke-LEVEL { v = (P > 0. ? U*U/P : 0.) }
+    OutputScalarSum { step = 50 } vol-LEVEL { v = P }
+    OutputScalarSum { step = 50 } U-LEVEL { v = U }
+    OutputErrorNorm { istep = 1 } error-LEVEL { v = P } {
+	s = Pt
+	v = DP
+    }
+} {
+    # this is necessary to obtain good convergence rates at high
+    # resolutions
+    dry = 1e-4
+}
+GfsBox {
+    left = Boundary
+    right = Boundary
+}

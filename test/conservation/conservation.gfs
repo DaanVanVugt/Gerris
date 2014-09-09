@@ -1,0 +1,50 @@
+# Title: Conservation of diffusive tracer
+#
+# Description:
+#
+# Tests that the total amount of a diffusive tracer is conserved
+# exactly on adaptive meshes. Also compares solutions obtained using
+# the implicit and explicit schemes.
+#
+# Author: St\'ephane Popinet and Ye Tao
+# Command: gerris3D conservation.gfs
+# Version: 110131
+# Required files:
+#
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+    Time { iend = 100 dtmax = 2e-1 }
+    Refine 3
+    VariableTracer T
+    VariableTracer Te
+    InitFraction T (0.01 - (x*x + y*y + z*z))
+    InitFraction Te (0.01 - (x*x + y*y + z*z))
+    SourceDiffusion T 1e-4 { beta = 0.5 }
+    SourceDiffusionExplicit Te 1e-4
+    AdaptGradient { istep = 1 } { minlevel = 3 maxlevel = 5 cmax = 1e-2 } T
+    OutputScalarSum { istep = 1 } st { v = T }
+    OutputScalarSum { istep = 1 } ste { v = T }
+    OutputScalarStats { istep = 1 } t { v = T }
+    OutputScalarStats { istep = 1 } te { v = T }
+    OutputScalarNorm { istep = 1 } diff { v = (T - Te) }
+    EventScript { start = end } {
+	if awk '{if ($9 > 8e-3) { 
+                   print "diff: " $9 > "/dev/stderr"; exit (1); 
+                }}' < diff &&
+	   awk 'BEGIN{ s=-1 } {
+                  if (s < 0.) s = $5; 
+                  else if ($5 - s != 0.) {
+                    print "st: " $5 - s > "/dev/stderr"; exit (1);
+                  }
+                }' < st &&
+	   awk 'BEGIN{ s=-1 } {
+                  if (s < 0.) s = $5;
+                  else if ($5 - s != 0.) {
+                    print "ste: " $5 - s > "/dev/stderr"; exit (1);
+                  }
+                }' < ste ; then :
+        else
+            exit $GFS_STOP;
+        fi
+    }
+}
+GfsBox{}
