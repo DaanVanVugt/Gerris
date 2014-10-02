@@ -2641,18 +2641,32 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble 
 }
 
 /* Returns: the height @h of the neighboring column in direction @d or
-   GFS_NODATA if it is undefined. Also fills @x with the coordinates
-   of the cell (3/4, 1 or 3/2 depending on its relative level). */
+   GFS_NODATA if it is undefined. Also fills @x (and @y in 3D) with the coordinates
+   of the cell (0, 1/4, 1/2, 3/4, 1 or 3/2 depending on its relative level and position). */
 static gdouble neighboring_column (FttCell * cell, 
 				   GfsVariable * h, FttComponent c, gdouble orientation,
-				   FttDirection d, gdouble * x)
+				   FttDirection d, gdouble * x
+#ifndef FTT_2D
+                   , gdouble * y
+#endif
+                   )
 {
   FttCell * n = ftt_cell_neighbor (cell, d);
   if (!n)
     return GFS_NODATA;
+
+#ifndef FTT_2D
+  FttComponent dc = d/2;
+  FttComponent oc = FTT_ORTHOGONAL_COMPONENT (c);
+  if (oc == dc)
+      oc = FTT_ORTHOGONAL_COMPONENT (oc);
+#endif
   if (ftt_cell_level (cell) == ftt_cell_level (n)) {
     if (GFS_HAS_DATA (n, h)) {
       *x = 1.;
+#ifndef FTT_2D
+      *y = 0.;
+#endif
       return GFS_VALUE (n, h);
     }
     else if (FTT_CELL_IS_LEAF (n))
@@ -2665,6 +2679,9 @@ static gdouble neighboring_column (FttCell * cell,
 	FttVector p;
 	ftt_cell_relative_pos (child.c[i], &p);
 	*x = 3./4.;
+#ifndef FTT_2D
+    *y = (&p.x)[oc] > 0 ? 1./4.:-1./4.;
+#endif
 	return GFS_VALUE (child.c[i], h)/2. + orientation*(&p.x)[c];
       }
     return GFS_NODATA;
@@ -2674,9 +2691,204 @@ static gdouble neighboring_column (FttCell * cell,
     FttVector p;
     ftt_cell_relative_pos (cell, &p);
     *x = 3./2.;
+#ifndef FTT_2D
+    *y = (&p.x)[oc] > 0 ? -1./2.:1./2.;
+#endif
     return (GFS_VALUE (n, h) - orientation*(&p.x)[c])*2.;
   }
   return GFS_NODATA;
+}
+
+/* Returns: the height @h of the neighboring corner column in direction @u,@v or
+   GFS_NODATA if it is undefined. Also fills @x and @y with the coordinates
+   of the cell (1/2, 3/4, 1 or 3/2 depending on its relative level and position). */
+static gdouble neighboring_corner_column (FttCell * cell,
+				   GfsVariable * h, FttComponent c, gdouble orientation,
+				   FttDirection u, FttDirection v,
+				   gdouble * x, gdouble * y)
+{
+  FttCell * n1 = ftt_cell_neighbor (cell, u);
+  if (!n1)
+    return GFS_NODATA;
+
+  FttVector p;
+  ftt_cell_relative_pos (cell, &p);
+
+  FttComponent uc = u/2;
+  FttComponent vc = v/2;
+
+  if (ftt_cell_level (cell) != ftt_cell_level (n1)) {
+    /* coarser neighbor, n might be n1 depending on orientation */
+    gdouble flip = v % 2 ? -1 : 1;
+    if ((&p.x)[vc] * flip < 0) {
+      if (GFS_HAS_DATA (n1, h)) {
+        *x = 3./2.;
+        *y = 1./2.;
+
+        return (GFS_VALUE (n1, h) - orientation*(&p.x)[c])*2.;
+      }
+
+      return GFS_NODATA;
+    }
+  }
+
+  FttCell * n = ftt_cell_neighbor (n1, v);
+  if (!n)
+    return GFS_NODATA;
+
+  if (ftt_cell_level (cell) == ftt_cell_level (n)) {
+    if (GFS_HAS_DATA (n, h)) {
+      *x = 1.;
+      *y = 1.;
+
+      return GFS_VALUE (n, h);
+    }
+    else if (FTT_CELL_IS_LEAF (n))
+      return GFS_NODATA;
+
+    /* check finer neighbors */
+    FttDirection directions[FTT_DIMENSION];
+    directions[uc] = FTT_OPPOSITE_DIRECTION (u);
+    directions[vc] = FTT_OPPOSITE_DIRECTION (v);
+
+    int cur_dir;
+    for (cur_dir = 2 * c; cur_dir <= 2 * c + 1; ++cur_dir) {
+      directions[c] = cur_dir;
+
+      FttCell * neighbor = ftt_cell_child_corner (n, directions);
+      if (neighbor && GFS_HAS_DATA (neighbor, h)) {
+        *x = 3./4.;
+        *y = 3./4.;
+
+        /*FttVector p;*/
+        ftt_cell_relative_pos (neighbor, &p);
+        return GFS_VALUE (neighbor, h)/2. + orientation*(&p.x)[c];
+      }
+    }
+
+    return GFS_NODATA;
+  }
+  else if (GFS_HAS_DATA (n, h)) {
+    /* coarser neighbor with data */
+
+    gdouble flip = u % 2 ? -1 : 1;
+    *x = (&p.x)[uc] * flip > 0 ? 3./2.:1./2.;
+    *y = 3./2.;
+
+    return (GFS_VALUE (n, h) - orientation*(&p.x)[c])*2.;
+  }
+  else if (!FTT_CELL_IS_LEAF (n)) {
+    /* Not a leaf, check finer neighbors */
+    FttDirection directions[FTT_DIMENSION];
+    gdouble flip = u % 2 ? -1 : 1;
+    directions[uc] = (&p.x)[uc] * flip < 0 ? u : FTT_OPPOSITE_DIRECTION (u);
+    directions[vc] = FTT_OPPOSITE_DIRECTION (v);
+
+    directions[c] = (&p.x)[c] > 0 ? 2 * c : 2 * c + 1;
+
+    FttCell * neighbor = ftt_cell_child_corner (n, directions);
+    if (neighbor && GFS_HAS_DATA (neighbor, h)) {
+      *x = 1.;
+      *y = 1.;
+
+      return GFS_VALUE (neighbor, h);
+    }
+  }
+
+  return GFS_NODATA;
+}
+
+static void collect_height_neighbors (FttCell *cell, GfsVariable *hv,
+                                      FttComponent c, gdouble orientation,
+                                      gdouble x[9], gdouble y[9], gdouble h[9])
+{
+#ifdef FTT_2D
+  g_assert_not_implemented ();
+#else
+  FttComponent u = FTT_ORTHOGONAL_COMPONENT (c);
+  FttComponent v = FTT_ORTHOGONAL_COMPONENT (u);
+  FttDirection LEFT = 2*u+1;
+  FttDirection RIGHT = 2*u;
+  FttDirection UP = 2*v;
+  FttDirection DOWN = 2*v+1;
+
+  int i;
+  for (i = 0; i < 9; ++i)
+  {
+    x[i] = GFS_NODATA;
+    y[i] = GFS_NODATA;
+    h[i] = GFS_NODATA;
+  }
+
+  gboolean found[4];
+  for (i = 0; i < 4; ++i)
+  {
+    found[i] = FALSE;
+  }
+
+  h[8] = GFS_VALUE (cell, hv);
+  x[8] = 0.;
+  y[8] = 0.;
+
+  FttVector cp;
+  ftt_cell_pos (cell, &cp);
+
+  /* neighbors */
+  h[0] = neighboring_column (cell, hv, c, orientation, RIGHT, &x[0], &y[0]);
+  if (y[0] == 1./2.) {
+    found[3] = TRUE;
+  }
+  else if (y[0] == -1./2.) {
+    found[0] = TRUE;
+  }
+
+  h[2] = neighboring_column (cell, hv, c, orientation, DOWN, &y[2], &x[2]);
+  y[2] = -y[2];
+  if (x[2] == 1./2.) {
+    found[0] = TRUE;
+  }
+  else if (x[2] == -1./2.) {
+    found[1] = TRUE;
+  }
+
+  h[4] = neighboring_column (cell, hv, c, orientation, LEFT, &x[4], &y[4]);
+  x[4] = -x[4];
+  if (y[4] == 1./2.) {
+    found[2] = TRUE;
+  }
+  else if (y[4] == -1./2.) {
+    found[1] = TRUE;
+  }
+
+  h[6] = neighboring_column (cell, hv, c, orientation, UP, &y[6], &x[6]);
+  if (x[6] == 1./2.) {
+    found[3] = TRUE;
+  }
+  else if (x[6] == -1./2.) {
+    found[2] = TRUE;
+  }
+
+  /* corners */
+  if (!found[0]) {
+    h[1] = neighboring_corner_column (cell, hv, c, orientation, RIGHT, DOWN, &x[1], &y[1]);
+    y[1] = -y[1];
+  }
+
+  if (!found[1]) {
+    h[3] = neighboring_corner_column (cell, hv, c, orientation, LEFT, DOWN, &x[3], &y[3]);
+    x[3] = -x[3];
+    y[3] = -y[3];
+  }
+
+  if (!found[2]) {
+    h[5] = neighboring_corner_column (cell, hv, c, orientation, LEFT, UP, &x[5], &y[5]);
+    x[5] = -x[5];
+  }
+
+  if (!found[3]) {
+    h[7] = neighboring_corner_column (cell, hv, c, orientation, RIGHT, UP, &x[7], &y[7]);
+  }
+#endif
 }
 
 static void curvature_from_h (FttCell * cell, GfsDomain * domain,
@@ -2707,6 +2919,33 @@ static void curvature_from_h (FttCell * cell, GfsDomain * domain,
     *kappa += kaxi;
     if (kmax)
       *kmax = MAX (*kmax, fabs (kaxi));
+  }
+}
+
+/* Currently this assumes uniform grid spacing for all samples. */
+static void curvature_from_h_3D (FttCell * cell,
+                  gdouble x[9], gdouble y[9], gdouble h[9],
+                  gdouble orientation, FttComponent c,
+                  gdouble * kappa, gdouble * kmax)
+{
+  gdouble size = ftt_cell_size (cell);
+  gdouble hx, hy, hxx, hyy, hxy;
+
+  hx = (h[0] - h[4]) / 2.;
+  hy = (h[6] - h[2]) / 2.;
+  gdouble tmp = 2. * h[8];
+  hxx = (h[0] - tmp + h[4]);
+  hyy = (h[6] - tmp + h[2]);
+  hxy = (h[7] - h[1] - h[5] + h[3]) / 4.;
+
+  gdouble dnm = 1 + hx*hx + hy*hy;
+  *kappa = (hyy + hx*hx*hyy - 2*hx*hy*hxy + hxx + hy*hy*hxx) / (size*sqrt(dnm*dnm*dnm));
+  if (kmax) {
+    gdouble kg = (hxx*hyy - hxy*hxy)/(dnm*dnm);
+    gdouble a = (*kappa)*(*kappa)/4. - kg;
+    *kmax = fabs (*kappa/2.);
+    if (a >= 0.)
+      *kmax += sqrt (a);
   }
 }
 
@@ -2755,7 +2994,31 @@ gboolean gfs_curvature_along_direction (FttCell * cell,
     }
   }
 #else /* 3D */
-  g_assert_not_implemented ();
+  gdouble orientation;
+  GfsVariable * hv = gfs_closest_height (cell, t, c, &orientation);
+  if (!hv) {
+    return FALSE;
+  }
+  else if (fabs (GFS_VALUE (cell, hv)) > 1.)
+    return FALSE; /* interface is too far */
+
+  gdouble x[9], y[9], h[9];
+  collect_height_neighbors (cell, hv, c, orientation, x, y, h);
+
+  int i;
+  gboolean good = TRUE;
+  for (i = 0; i < 9 && good; ++i) {
+    if ( (fabs(x[i]) != 1. && x[i] != 0.) || (fabs(y[i]) != 1. && y[i] != 0.) || h[i] == GFS_NODATA) {
+      good = FALSE;
+    }
+  }
+
+  if (good)
+  {
+    /* compute curvature */
+    curvature_from_h_3D (cell, x, y, h, orientation, c, kappa, kmax);
+    return TRUE;
+  }
 #endif /* 3D */
 
   return FALSE;
@@ -2806,7 +3069,59 @@ static gboolean curvature_along_direction_new (FttCell * cell,
     return FALSE;
   }
 #else /* 3D */
-  g_assert_not_implemented ();
+  gdouble orientation;
+  GfsVariable * hv = gfs_closest_height (cell, t, c, &orientation);
+  FttComponent u = FTT_ORTHOGONAL_COMPONENT (c);
+  FttComponent v = FTT_ORTHOGONAL_COMPONENT (u);
+  if (!hv) {
+    /* no data for either directions, look "right", "left", "up", and "down" to
+       collect potential interface positions */
+    hv = gfs_closest_height (ftt_cell_neighbor (cell, 2*u), t, c, &orientation);
+    if (!hv)
+      hv = gfs_closest_height (ftt_cell_neighbor (cell, 2*u + 1), t, c, &orientation);
+    if (!hv)
+      hv = gfs_closest_height (ftt_cell_neighbor (cell, 2*v), t, c, &orientation);
+    if (!hv)
+      hv = gfs_closest_height (ftt_cell_neighbor (cell, 2*v+1), t, c, &orientation);
+    if (!hv) /* give up */
+      return FALSE;
+  }
+  else if (fabs (GFS_VALUE (cell, hv)) > 1.)
+    return FALSE; /* interface is too far */
+
+  gdouble x[9], y[9], h[9];
+  collect_height_neighbors (cell, hv, c, orientation, x, y, h);
+
+  int i;
+  gboolean good = TRUE;
+  for (i = 0; i < 9 && good; ++i) {
+    if ( (fabs(x[i]) != 1. && x[i] != 0.) || (fabs(y[i]) != 1. && y[i] != 0.) || h[i] == GFS_NODATA) {
+      good = FALSE;
+    }
+  }
+
+  if (good)
+  {
+    /* compute curvature */
+    curvature_from_h_3D (cell, x, y, h, orientation, c, kappa, kmax);
+    return TRUE;
+  }
+  else
+  {
+    /* collect interface positions */
+    for (i = 0; i < 9; ++i)
+    {
+      if (h[i] != GFS_NODATA && x[i] != GFS_NODATA && y[i] != GFS_NODATA)
+      {
+        interface[*nb][u] = x[i];
+        interface[*nb][v] = y[i];
+        interface[(*nb)++][c] = orientation * h[i];
+      }
+    }
+
+    return FALSE;
+  }
+
 #endif /* 3D */
 
   return FALSE;
@@ -3427,7 +3742,57 @@ static gboolean height_normal (FttCell * cell, GfsVariable * v, FttVector * m)
     }
   }
 #else /* 3D */
-  g_assert_not_implemented ();
+  GfsVariableTracerVOFHeight * t = GFS_VARIABLE_TRACER_VOF_HEIGHT (v);
+  FttComponent c;
+  m->x = 0.;
+  m->y = 1.;
+  m->z = 0.;
+
+  for (c = 0.; c < 3; c++) {
+    gdouble orientation;
+    GfsVariable * hv = gfs_closest_height (cell, t, c, &orientation);
+
+    if (hv != NULL && fabs (GFS_VALUE (cell, hv)) <= 1.) {
+      /* Gather surrounding positions */
+      gdouble x[2], y[2], h[2];
+
+      FttComponent u = FTT_ORTHOGONAL_COMPONENT(c);
+      FttComponent v = FTT_ORTHOGONAL_COMPONENT(u);
+
+      FttDirection LEFT = 2*u+1;
+      FttDirection RIGHT = 2*u;
+      FttDirection UP = 2*v;
+      FttDirection DOWN = 2*v+1;
+
+      /* u direction first */
+      h[0] = neighboring_column (cell, hv, c, orientation, RIGHT, &x[0], &y[0]);
+      if (h[0] == GFS_NODATA || y[0] != 0.) continue;
+
+      h[1] = neighboring_column (cell, hv, c, orientation, LEFT, &x[1], &y[1]);
+      if (h[1] == GFS_NODATA || y[1] != 0.) continue;
+
+      gdouble hu = (h[0] - h[1]) / 2.;
+
+      /* v direction next */
+      h[0] = neighboring_column (cell, hv, c, orientation, UP, &x[0], &y[0]);
+      if (h[0] == GFS_NODATA || y[0] != 0.) continue;
+
+      h[1] = neighboring_column (cell, hv, c, orientation, DOWN, &x[1], &y[1]);
+      if (h[1] == GFS_NODATA || y[1] != 0.) continue;
+
+      gdouble hv = (h[0] - h[1]) / 2.;
+
+      gdouble s = 1. - 1. / sqrt(hu*hu + hv*hv + 1);
+      if ( s < slope )
+      {
+        slope = s;
+        (&m->x)[c] = orientation;
+        (&m->x)[u] = -hu;
+        (&m->x)[v] = -hv;
+      }
+    }
+  }
+
 #endif /* 3D */
   return slope < G_MAXDOUBLE;
 }
