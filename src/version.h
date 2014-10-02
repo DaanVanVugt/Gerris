@@ -6,6 +6,6 @@
 #ifndef GFSVERSION_H
 #define GFSVERSION_H
 
-#define GFS_BUILD_VERSION "131206-155120"
+#define GFS_BUILD_VERSION "140625-194725 + local changes"
 
 #endif /* GFSVERSION_H */
